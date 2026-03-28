@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useMemo, FormEvent } from 'react';
+import React, { useState, useEffect, useMemo, FormEvent, useRef } from 'react';
 import { 
   LayoutDashboard, 
   Calendar as CalendarIcon, 
@@ -18,7 +18,8 @@ import {
   MoreVertical,
   Cake,
   Heart,
-  Church,
+  Flame,
+  Star,
   Info,
   Lightbulb,
   Download,
@@ -30,7 +31,7 @@ import {
   Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { HDate, Zmanim, Location, getSedra } from '@hebcal/core';
+import { HDate, Zmanim, Location, getSedra, gematriya, gematriyaStrToNum } from '@hebcal/core';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
 import { cn } from './lib/utils';
 import { CalendarEvent, EventType } from './types';
@@ -280,34 +281,71 @@ const DashboardView = ({ events, onAddClick }: { events: CalendarEvent[], onAddC
   );
 };
 
-const AddEventView = ({ onSave, onCancel }: { onSave: (e: CalendarEvent) => void, onCancel: () => void }) => {
+const AddEventView = ({ events, onSave, onCancel }: { events: CalendarEvent[], onSave: (e: CalendarEvent) => void, onCancel: () => void }) => {
   const [formData, setFormData] = useState({
     title: '',
     type: 'birthday' as EventType,
+    customType: '',
     day: 1,
     month: 'ניסן',
-    year: 5784,
+    yearStr: gematriya(5786) || 'תשפ״ו',
+    afterSunset: false,
     description: ''
   });
 
   const months = [
-    'ניסן', 'אייר', 'סיוון', 'תמוז', 'אב', 'אלול', 'תשרי', 'חשוון', 'כסלו', 'טבת', 'שבט', 'אדר', 'אדר ב׳'
+    'תשרי', 'חשוון', 'כסלו', 'טבת', 'שבט', 'אדר', 'אדר ב׳', 'ניסן', 'אייר', 'סיוון', 'תמוז', 'אב', 'אלול'
   ];
+
+  const uniqueCustomTypes = useMemo(() => {
+    return Array.from(new Set(events.map(e => e.type).filter(t => !['birthday', 'anniversary', 'yahrzeit'].includes(t))));
+  }, [events]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+    let y = 5786;
+    try {
+        const cleanYearStr = formData.yearStr.replace(/^ה['״"]?(?=[א-ת])/g, '');
+        y = gematriyaStrToNum(cleanYearStr);
+        if (y < 3000) y += 5000;
+    } catch {
+        // fallback
+    }
+    
     onSave({
       id: Math.random().toString(36).substr(2, 9),
       title: formData.title,
-      type: formData.type,
+      type: formData.type === 'other' ? formData.customType : formData.type,
       hebrewDate: {
         day: formData.day,
         month: formData.month,
-        year: formData.year
+        year: y,
+        afterSunset: formData.afterSunset
       },
       description: formData.description
     });
   };
+
+  const previewDate = useMemo(() => {
+    try {
+        const cleanYearStr = formData.yearStr.replace(/^ה['״"]?(?=[א-ת])/g, '');
+        let y = gematriyaStrToNum(cleanYearStr);
+        if (y < 3000) y += 5000;
+        const monthMap: Record<string, string> = {
+            'ניסן': 'Nisan', 'אייר': 'Iyyar', 'סיוון': 'Sivan', 'תמוז': 'Tamuz', 'אב': 'Av', 'אלול': 'Elul',
+            'תשרי': 'Tishrei', 'חשוון': 'Cheshvan', 'כסלו': 'Kislev', 'טבת': 'Tevet', 'שבט': 'Shvat', 'אדר': 'Adar 1', 'אדר ב׳': 'Adar 2'
+        };
+        const hd = new HDate(formData.day, monthMap[formData.month] || 'Nisan', y);
+        const targetHd = formData.afterSunset ? hd.prev() : hd;
+        const gregDate = targetHd.greg();
+        return {
+            gregStr: format(gregDate, 'd MMMM yyyy'),
+            sedra: getSedra(y, true).lookup(hd)?.parsha?.join('-') || 'אין פרשה'
+        };
+    } catch {
+        return { gregStr: 'תאריך לא חוקי', sedra: '' };
+    }
+  }, [formData.day, formData.month, formData.yearStr, formData.afterSunset]);
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -326,11 +364,13 @@ const AddEventView = ({ onSave, onCancel }: { onSave: (e: CalendarEvent) => void
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">סוג אירוע</label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 {[
                   { id: 'birthday', label: 'יום הולדת', icon: Cake },
                   { id: 'anniversary', label: 'יום נישואין', icon: Heart },
-                  { id: 'yahrzeit', label: 'יארצייט', icon: Church },
+                  { id: 'yahrzeit', label: 'יארצייט', icon: Flame },
+                  ...uniqueCustomTypes.map(t => ({ id: t, label: t, icon: Star })),
+                  { id: 'other', label: 'אחר...', icon: PlusCircle }
                 ].map((type) => (
                   <label key={type.id} className="cursor-pointer">
                     <input 
@@ -338,18 +378,30 @@ const AddEventView = ({ onSave, onCancel }: { onSave: (e: CalendarEvent) => void
                       name="event_type" 
                       className="hidden peer" 
                       checked={formData.type === type.id}
-                      onChange={() => setFormData({ ...formData, type: type.id as EventType })}
+                      onChange={() => setFormData({ ...formData, type: type.id as EventType, customType: type.id === 'other' ? '' : formData.customType })}
                     />
-                    <div className="text-center py-4 border border-slate-200 rounded-lg peer-checked:bg-blue-50 peer-checked:border-blue-600 peer-checked:text-blue-700 transition-all">
+                    <div className="text-center py-4 border border-slate-200 rounded-lg peer-checked:bg-blue-50 peer-checked:border-blue-600 peer-checked:text-blue-700 transition-all flex flex-col items-center justify-center h-full">
                       <type.icon className="mx-auto mb-1" size={20} />
                       <span className="text-[11px] font-semibold">{type.label}</span>
                     </div>
                   </label>
                 ))}
               </div>
+              {formData.type === 'other' && (
+                <div className="mt-2 text-right">
+                  <input
+                    type="text"
+                    placeholder="הזן סוג אירוע מותאם אישית..."
+                    className="w-full bg-slate-50 border-none rounded-lg py-2 px-3 focus:ring-2 focus:ring-blue-500/20 text-sm text-right"
+                    value={formData.customType}
+                    onChange={(e) => setFormData({ ...formData, customType: e.target.value })}
+                    required
+                  />
+                </div>
+              )}
             </div>
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">שם מלא</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">שם/כותרת</label>
               <div className="relative">
                 <input 
                   className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm text-right"
@@ -361,7 +413,7 @@ const AddEventView = ({ onSave, onCancel }: { onSave: (e: CalendarEvent) => void
                 />
                 <Info className="absolute left-3 top-3 text-slate-400" size={16} />
               </div>
-              <p className="text-[10px] text-slate-400 italic">כלול שם עברי מלא לדיוק הלכתי במידת הצורך.</p>
+              <p className="text-[10px] text-slate-400 italic">יש לציין כותרת לאירוע או שם מלא.</p>
             </div>
           </div>
         </section>
@@ -372,47 +424,54 @@ const AddEventView = ({ onSave, onCancel }: { onSave: (e: CalendarEvent) => void
               <span className="w-1.5 h-6 bg-slate-400 rounded-full"></span>
               בחירת תאריך עברי
             </h3>
-            <div className="flex bg-slate-100 rounded-lg p-1 text-[10px] font-bold">
-              <button type="button" className="px-3 py-1 bg-white rounded shadow-sm text-blue-600 uppercase tracking-tighter">ישראל</button>
-              <button type="button" className="px-3 py-1 text-slate-400 uppercase tracking-tighter">חוץ לארץ</button>
-            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="space-y-2">
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">חודש עברי</label>
               <select 
                 className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
                 value={formData.month}
                 onChange={(e) => setFormData({ ...formData, month: e.target.value })}
+                required
               >
                 {months.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
             </div>
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">יום (1-30)</label>
-              <input 
-                className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm text-right"
-                type="number" min="1" max="30"
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">יום</label>
+              <select 
+                className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
                 value={formData.day}
                 onChange={(e) => setFormData({ ...formData, day: parseInt(e.target.value) })}
-              />
+                required
+              >
+                {Array.from({ length: 30 }).map((_, i) => (
+                  <option key={i+1} value={i+1}>{gematriya(i+1)}</option>
+                ))}
+              </select>
             </div>
             <div className="space-y-2">
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">שנה עברית</label>
               <input 
                 className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm text-right"
-                placeholder="תשפ״ד"
-                value={formData.year}
-                onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
-                type="number"
+                placeholder="תשפ״ו"
+                value={formData.yearStr}
+                onChange={(e) => setFormData({ ...formData, yearStr: e.target.value })}
+                type="text"
+                required
               />
             </div>
-          </div>
-          <div className="mt-8 p-4 bg-blue-50 rounded-lg flex gap-4 items-start">
-            <Lightbulb className="text-blue-600 mt-0.5" size={20} />
-            <div>
-              <h4 className="text-xs font-bold uppercase tracking-tight text-blue-700 mb-1">לוגיקת חישוב</h4>
-              <p className="text-xs text-slate-600 leading-relaxed">בחירה ב'ישראל' תתאים את החגים (כגון סוכות ופסח) למנהגי היום האחד בארץ. ימי הולדת וימי זיכרון מחושבים על פי מעבר השקיעה של התאריך שנבחר.</p>
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">זמן</label>
+               <select 
+                className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
+                value={formData.afterSunset ? "after" : "before"}
+                onChange={(e) => setFormData({ ...formData, afterSunset: e.target.value === "after" })}
+                required
+              >
+                <option value="before">לפני השקיעה</option>
+                <option value="after">אחרי השקיעה</option>
+              </select>
             </div>
           </div>
         </section>
@@ -421,12 +480,12 @@ const AddEventView = ({ onSave, onCancel }: { onSave: (e: CalendarEvent) => void
           <div className="flex-1 bg-slate-50 p-6 rounded-xl border border-slate-200 flex items-center gap-6">
             <div className="w-16 h-16 bg-white rounded-xl shadow-sm flex flex-col items-center justify-center border border-slate-200">
               <span className="text-[10px] font-bold text-slate-400 leading-none">{formData.month}</span>
-              <span className="text-2xl font-extrabold text-blue-900">{formData.day}</span>
+              <span className="text-2xl font-extrabold text-blue-900">{gematriya(formData.day)}</span>
             </div>
             <div>
               <h4 className="font-bold text-slate-900">סיכום תצוגה מקדימה</h4>
-              <p className="text-xs text-slate-500">תאריך גרגוריאני מחושב: 26 באפריל, 2024</p>
-              <p className="text-xs text-slate-500 italic">פרשת אחרי מות</p>
+              <p className="text-xs text-slate-500">תאריך גרגוריאני מחושב: {previewDate.gregStr}</p>
+              {previewDate.sedra && <p className="text-xs text-slate-500 italic">פרשת {previewDate.sedra}</p>}
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -554,27 +613,159 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
   );
 };
 
-const ImportExportView = () => {
+const ImportExportView = ({ events, onImport }: { events: CalendarEvent[], onImport?: (events: CalendarEvent[]) => void }) => {
+  const [selectedSchema, setSelectedSchema] = useState('xml');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const processFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      try {
+        if (file.name.endsWith('.json')) {
+          const data = JSON.parse(text);
+          if (data.events && Array.isArray(data.events)) {
+            onImport?.(data.events);
+          } else {
+            alert('הקובץ אינו מכיל אירועים תקינים.');
+          }
+        } else if (file.name.endsWith('.xml')) {
+          const parser = new DOMParser();
+          const xmlDoc = parser.parseFromString(text, "text/xml");
+          const eventNodes = xmlDoc.getElementsByTagName("event");
+          const newEvents: CalendarEvent[] = [];
+          for (let i = 0; i < eventNodes.length; i++) {
+            const title = eventNodes[i].getElementsByTagName("title")[0]?.textContent || "אירוע מיובא (XML)";
+            const desc = eventNodes[i].getElementsByTagName("description")[0]?.textContent || "";
+            const type = (eventNodes[i].getAttribute("type") as EventType) || "birthday";
+            newEvents.push({
+              id: Math.random().toString(36).substr(2, 9),
+              title,
+              type: type,
+              description: desc,
+              hebrewDate: { day: 1, month: 'ניסן', year: 5784 }
+            });
+          }
+          if (newEvents.length > 0) {
+            onImport?.(newEvents);
+          } else {
+            alert('לא נמצאו אירועים בקובץ ה-XML.');
+          }
+        } else if (file.name.endsWith('.ics')) {
+          const lines = text.split('\\n');
+          const newEvents: CalendarEvent[] = [];
+          
+          let currentEvent: Partial<CalendarEvent> | null = null;
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed === 'BEGIN:VEVENT') currentEvent = { id: Math.random().toString(36).substr(2, 9), type: 'birthday', hebrewDate: { day: 1, month: 'ניסן', year: 5784 } };
+            else if (trimmed === 'END:VEVENT' && currentEvent) {
+              if (currentEvent.title) newEvents.push(currentEvent as CalendarEvent);
+              currentEvent = null;
+            }
+            else if (currentEvent && trimmed.startsWith('SUMMARY:')) currentEvent.title = trimmed.substring(8);
+            else if (currentEvent && trimmed.startsWith('DESCRIPTION:')) currentEvent.description = trimmed.substring(12);
+            else if (currentEvent && trimmed.startsWith('CATEGORIES:')) currentEvent.type = trimmed.substring(11);
+          }
+          
+          if (newEvents.length > 0) {
+            onImport?.(newEvents);
+          } else {
+            alert('לא נמצאו אירועים בקובץ ה-ICS.');
+          }
+        } else {
+          alert('פורמט קובץ לא נתמך. נא להעלות קובץ מסוג .json, .xml או .ics');
+        }
+      } catch (err) {
+        alert('שגיאה בפענוח הקובץ.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleFileDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      processFile(e.target.files[0]);
+    }
+  };
+
+  const now = new Date().toISOString();
+
+  const xmlEvents = events.map(e => `    <event id="${e.id}" type="${e.type}">
+      <title>${e.title}</title>
+      <date>
+        <hebrew>${e.hebrewDate.day} ${e.hebrewDate.month} ${e.hebrewDate.year}</hebrew>
+      </date>
+      <description>${e.description}</description>
+    </event>`).join('\n');
+
   const xmlPreview = `<?xml version="1.0" encoding="UTF-8"?>
 <scribe_calendar version="2.4">
   <metadata>
-    <generated_at>2024-05-20T10:30Z</generated_at>
+    <generated_at>${now}</generated_at>
     <scope>5784</scope>
     <location>Jerusalem</location>
   </metadata>
 
   <events>
-    <event id="772" type="holiday">
-      <title>Rosh Hashanah</title>
-      <date>
-        <hebrew>01 Tishrei 5784</hebrew>
-        <gregorian>2023-09-16</gregorian>
-      </date>
-    </event>
-    
-    // ... [Additional records omitted]
+${xmlEvents}
   </events>
 </scribe_calendar>`;
+
+  const icsEvents = events.map(e => `BEGIN:VEVENT
+UID:${e.id}
+SUMMARY:${e.title}
+DESCRIPTION:${e.description}
+CATEGORIES:${e.type}
+END:VEVENT`).join('\n');
+
+  const icsPreview = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Scribe Calendar//NONSGML App//EN
+CALSCALE:GREGORIAN
+${icsEvents}
+END:VCALENDAR`;
+
+  const jsonPreview = JSON.stringify({
+    version: "2.4",
+    metadata: {
+      generated_at: now,
+      scope: "5784",
+      location: "Jerusalem"
+    },
+    events: events
+  }, null, 2);
+
+  const previews: Record<string, string> = {
+    xml: xmlPreview,
+    ics: icsPreview,
+    json: jsonPreview
+  };
+
+  const handleDownload = () => {
+    const content = previews[selectedSchema];
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `calendar_export.${selectedSchema}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(previews[selectedSchema]);
+    alert('הועתק ללוח!');
+  };
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full">
@@ -588,7 +779,7 @@ const ImportExportView = () => {
         <div className="col-span-12 lg:col-span-5 space-y-6">
           <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-right">
             <div className="flex items-center gap-3 mb-6">
-              <ArrowLeftRight className="text-blue-600" size={20} />
+               <ArrowLeftRight className="text-blue-600" size={20} />
               <h3 className="font-bold text-lg">טווח אירועים לייצוא</h3>
             </div>
             <div className="space-y-4">
@@ -617,16 +808,16 @@ const ImportExportView = () => {
                   <span className="px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-xs font-medium flex items-center gap-2 cursor-pointer hover:bg-slate-200 transition-colors">
                     פרשיות <Plus size={14} />
                   </span>
-                </div>
+                 </div>
               </div>
             </div>
-          </section>
+           </section>
 
           <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-right">
             <div className="flex items-center gap-3 mb-6">
               <Settings className="text-blue-600" size={20} />
               <h3 className="font-bold text-lg">מבנה פלט</h3>
-            </div>
+             </div>
             <div className="space-y-3">
               {[
                 { id: 'xml', label: 'מבנה XML סטנדרטי (v2.4)', desc: 'מומלץ עבור יישומי אינטרנט וספריית סופר' },
@@ -634,75 +825,86 @@ const ImportExportView = () => {
                 { id: 'json', label: 'נתונים גולמיים (JSON)', desc: 'זוגות מפתח-ערך לא מעובדים לניתוח נתונים' },
               ].map((schema) => (
                 <label key={schema.id} className="relative flex items-center p-3 rounded-lg border border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors">
-                  <input type="radio" name="schema" className="text-blue-600 focus:ring-blue-500 w-4 h-4 ml-4" defaultChecked={schema.id === 'xml'} />
+                  <input 
+                    type="radio" 
+                    name="schema" 
+                    className="text-blue-600 focus:ring-blue-500 w-4 h-4 ml-4" 
+                    checked={selectedSchema === schema.id}
+                    onChange={() => setSelectedSchema(schema.id)} 
+                  />
                   <div>
                     <span className="block text-sm font-bold text-slate-900">{schema.label}</span>
                     <span className="block text-[11px] text-slate-500">{schema.desc}</span>
                   </div>
                 </label>
-              ))}
-            </div>
+               ))}
+             </div>
           </section>
 
           <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-right">
-            <div className="flex items-center gap-3 mb-4">
+             <div className="flex items-center gap-3 mb-4">
               <ArrowLeftRight className="text-blue-600" size={20} />
               <h3 className="font-bold text-lg">ייבוא נתונים</h3>
             </div>
-            <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
-              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+            <div 
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleFileDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-200 rounded-xl p-8 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
+               <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <UploadCloud className="text-blue-600" size={24} />
               </div>
-              <p className="text-sm font-bold text-slate-900 mb-1">גרור קובץ XML לכאן</p>
-              <p className="text-[10px] text-slate-500 mb-4">או לחץ לבחירת קובץ מהמחשב</p>
-              <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors">
-                בחר קובץ
-              </button>
+              <p className="text-sm font-bold text-slate-900 mb-1">גרור קובץ JSON, XML או ICS לכאן</p>
+               <p className="text-[10px] text-slate-500 mb-4">או לחץ לבחירת קובץ מהמחשב</p>
+              <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors pointer-events-none">
+                 בחר קובץ
+               </button>
+               <input type="file" ref={fileInputRef} className="hidden" accept=".xml,.json,.ics" onChange={handleFileSelect} />
             </div>
-          </section>
+           </section>
 
-          <div className="pt-2">
-            <button className="w-full bg-gradient-to-r from-blue-600 to-blue-800 p-4 rounded-xl text-white font-bold flex items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-all group">
-              <Download className="group-hover:translate-y-1 transition-transform" size={20} />
+           <div className="pt-2">
+            <button onClick={handleDownload} className="w-full bg-gradient-to-r from-blue-600 to-blue-800 p-4 rounded-xl text-white font-bold flex items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-all group">
+               <Download className="group-hover:translate-y-1 transition-transform" size={20} />
               בצע הורדת נתונים
             </button>
             <p className="text-center mt-3 text-[11px] text-slate-400 uppercase tracking-widest opacity-60">נפח משוער: 442 KB</p>
-          </div>
-        </div>
+           </div>
+         </div>
 
-        <div className="col-span-12 lg:col-span-7 flex flex-col h-full min-h-[600px]">
-          <div className="flex-1 bg-slate-900 rounded-xl overflow-hidden shadow-2xl flex flex-col">
-            <div className="bg-white/5 px-6 py-4 flex items-center justify-between border-b border-white/5">
+         <div className="col-span-12 lg:col-span-7 flex flex-col h-full min-h-[600px]">
+           <div className="flex-1 bg-slate-900 rounded-xl overflow-hidden shadow-2xl flex flex-col">
+             <div className="bg-white/5 px-6 py-4 flex items-center justify-between border-b border-white/5">
               <div className="flex items-center gap-2">
                 <div className="flex gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-red-400/40"></div>
+                   <div className="w-2.5 h-2.5 rounded-full bg-red-400/40"></div>
                   <div className="w-2.5 h-2.5 rounded-full bg-yellow-400/40"></div>
                   <div className="w-2.5 h-2.5 rounded-full bg-green-400/40"></div>
                 </div>
-                <span className="mr-4 text-[11px] font-bold text-slate-500 uppercase tracking-widest">תצוגה מקדימה של XML</span>
-              </div>
-              <button className="text-slate-500 hover:text-white transition-colors">
+                 <span className="mr-4 text-[11px] font-bold text-slate-500 uppercase tracking-widest">תצוגה מקדימה של {selectedSchema.toUpperCase()}</span>
+               </div>
+               <button onClick={handleCopy} className="text-slate-500 hover:text-white transition-colors">
                 <Copy size={18} />
               </button>
             </div>
-            <div className="p-8 font-mono text-sm leading-relaxed text-blue-100/80 overflow-y-auto h-full text-left" dir="ltr">
-              <pre><code>{xmlPreview}</code></pre>
+             <div className="p-8 font-mono text-sm leading-relaxed text-blue-100/80 overflow-y-auto h-full text-left" dir="ltr">
+              <pre><code>{previews[selectedSchema]}</code></pre>
             </div>
             <div className="mt-auto bg-white/5 px-6 py-3 flex items-center gap-4 border-t border-white/5">
-              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-              <span className="text-[10px] text-slate-500 font-medium">אימות בזמן אמת: המבנה תקין</span>
+               <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+               <span className="text-[10px] text-slate-500 font-medium">אימות בזמן אמת: המבנה תקין</span>
             </div>
-          </div>
+           </div>
           <div className="mt-6 flex gap-4 p-4 rounded-xl bg-blue-50 border border-blue-100 text-right">
-            <Info className="text-blue-600 shrink-0" size={20} />
-            <p className="text-xs text-slate-600 leading-relaxed">
+             <Info className="text-blue-600 shrink-0" size={20} />
+             <p className="text-xs text-slate-600 leading-relaxed">
               <strong className="text-slate-900 block mb-1">הערת מפתח</strong>
-              סכמת XML זו משתמשת בתקן ISO 8601 עבור ערכי זמן ובהרחבות מותאמות אישית עבור תאריכים ליטורגיים עבריים. לשילוב קל עם יומנים אישיים, מומלץ להשתמש בפורמט iCalendar החדש שהוספנו.
-            </p>
-          </div>
-        </div>
+               סכמת XML זו משתמשת בתקן ISO 8601 עבור ערכי זמן ובהרחבות מותאמות אישית עבור תאריכים ליטורגיים עבריים. לשילוב קל עם יומנים אישיים, מומלץ להשתמש בפורמט iCalendar החדש שהוספנו.
+             </p>
+           </div>
+         </div>
       </div>
-    </div>
+     </div>
   );
 };
 
@@ -710,33 +912,16 @@ const ImportExportView = () => {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [events, setEvents] = useState<CalendarEvent[]>([
-    {
-      id: '1',
-      title: 'אברהם בן תרח',
-      type: 'yahrzeit',
-      hebrewDate: { day: 16, month: 'אייר', year: 5784 },
-      description: 'יום השנה ה-25. נהוג להדליק נר נשמה לפני השקיעה ביום חמישי.'
-    },
-    {
-      id: '2',
-      title: 'שרה רבקה גולדשטיין',
-      type: 'birthday',
-      hebrewDate: { day: 25, month: 'אייר', year: 5784 },
-      description: 'חוגגת 12 (בת מצווה). התאריך העברי הוא תאריך החגיגה המרכזי.'
-    },
-    {
-      id: '3',
-      title: 'החתונה של דוד ולאה',
-      type: 'anniversary',
-      hebrewDate: { day: 2, month: 'סיוון', year: 5784 },
-      description: 'יום נישואין ה-15. נחגג לפי התאריך העברי מאז שנת תשס״ט.'
-    }
-  ]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
 
   const handleSaveEvent = (newEvent: CalendarEvent) => {
     setEvents([...events, newEvent]);
     setActiveTab('dashboard');
+  };
+
+  const handleImportEvents = (importedEvents: CalendarEvent[]) => {
+    setEvents(importedEvents);
+    alert(`יובאו בהצלחה ${importedEvents.length} אירועים!`);
   };
 
   const renderContent = () => {
@@ -746,9 +931,9 @@ export default function App() {
       case 'calendar':
         return <CalendarView events={events} />;
       case 'add-event':
-        return <AddEventView onSave={handleSaveEvent} onCancel={() => setActiveTab('dashboard')} />;
+        return <AddEventView events={events} onSave={handleSaveEvent} onCancel={() => setActiveTab('dashboard')} />;
       case 'import-export':
-        return <ImportExportView />;
+        return <ImportExportView events={events} onImport={handleImportEvents} />;
       default:
         return <DashboardView events={events} onAddClick={() => setActiveTab('add-event')} />;
     }

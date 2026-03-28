@@ -1,4 +1,4 @@
-export type EventType = 'birthday' | 'anniversary' | 'yahrzeit' | 'holiday' | 'other';
+export type EventType = 'birthday' | 'anniversary' | 'yahrzeit' | string;
 
 export interface CalendarEvent {
   id: string;
@@ -8,8 +8,8 @@ export interface CalendarEvent {
     day: number;
     month: string; // Hebrew month name
     year: number;
+    afterSunset?: boolean;
   };
-  description?: string;
 }
 
 export interface ZmanimData {
