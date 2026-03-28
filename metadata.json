@@ -1,0 +1,5 @@
+{
+  "name": "The Modern Scribe",
+  "description": "A modern Hebrew calendar and life-cycle event manager with precise astronomical calculations.",
+  "requestFramePermissions": ["geolocation"]
+}
