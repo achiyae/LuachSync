@@ -93,7 +93,7 @@ const Sidebar = ({ activeTab, setActiveTab, isCollapsed, onToggleCollapse, isMob
                 <BookOpen size={20} />
               </div>
               <div>
-                <h2 className="font-bold text-blue-900 leading-tight">סופר מהיר</h2>
+                <h2 className="font-bold text-blue-900 leading-tight">HC4GC</h2>
                 <p className="text-[10px] uppercase tracking-widest text-slate-500 opacity-70">מערכת לוח שנה עברי</p>
               </div>
             </div>
@@ -629,7 +629,6 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
   return (
     <div className="p-8 max-w-4xl mx-auto">
       <div className="mb-10">
-        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 opacity-60">ניהול ארכיון</span>
         <h2 className="text-4xl font-extrabold text-slate-900 mt-1">רישום אירוע חדש במעגל החיים</h2>
         <p className="text-slate-500 mt-2 max-w-xl">סנכרן אבני דרך אישיות עם מחזור הירח והשמש העברי. חישובים אסטרונומיים מדויקים יוחלו בהתאם לבחירת האזור שלך.</p>
       </div>
@@ -1372,11 +1371,11 @@ export default function App() {
 
   const getTitle = () => {
     switch (activeTab) {
-      case 'dashboard': return 'הסופר המודרני';
+      case 'dashboard': return 'יומן עברי ליומן גוגל';
       case 'calendar': return 'לוח שנה';
       case 'add-event': return 'הוספת אירוע';
       case 'import-export': return 'ייצוא וייבוא';
-      default: return 'הסופר המודרני';
+      default: return 'HC4GC';
     }
   };
 
@@ -1421,7 +1420,7 @@ export default function App() {
 
         <footer className="w-full mt-auto py-4 border-t border-slate-200 bg-slate-50 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center px-4 sm:px-8">
           <div className="text-slate-400 font-inter text-[11px] uppercase tracking-widest">
-            © 2024 הסופר המודרני • מערכת פעילה
+            © 2024 HC4GC • מערכת פעילה
           </div>
           <div className="flex gap-6 flex-wrap">
             <button className="text-slate-400 hover:text-blue-800 font-inter text-[11px] uppercase tracking-widest transition-colors opacity-80 hover:opacity-100">סטטוס</button>
