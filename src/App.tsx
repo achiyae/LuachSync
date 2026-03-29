@@ -1519,7 +1519,7 @@ DTEND;VALUE=DATE:${dtEnd}
 SUMMARY:${escapedSummary}
 CATEGORIES:${escapedCategory}
 X-HC4GC-ENTRY-TYPE:GENERATED
-      TRANSP:TRANSPARENT
+TRANSP:TRANSPARENT
 ${reminderSection}END:VEVENT`);
       } catch {
         // Skip invalid dates in years where the Hebrew date does not exist.
