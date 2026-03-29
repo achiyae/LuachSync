@@ -45,6 +45,12 @@ const hebrewMonthsMap: Record<string, string> = {
     'Shvat': 'שבט', "Sh'vat": 'שבט', 'Adar 1': 'אדר א׳', 'Adar I': 'אדר א׳', 'Adar 2': 'אדר ב׳', 'Adar II': 'אדר ב׳', 'Adar': 'אדר'
 };
 
+const hebrewMonthsRev: Record<string, string> = {
+  'Nisan': 'ניסן', 'Iyyar': 'אייר', 'Sivan': 'סיוון', 'Tamuz': 'תמוז', 'Av': 'אב', 'Elul': 'אלול',
+  'Tishrei': 'תשרי', 'Cheshvan': 'חשוון', 'Heshvan': 'חשוון', 'Kislev': 'כסלו', 'Tevet': 'טבת',
+  'Shvat': 'שבט', "Sh'vat": 'שבט', 'Adar 1': 'אדר א׳', 'Adar I': 'אדר א׳', 'Adar 2': 'אדר ב׳', 'Adar II': 'אדר ב׳', 'Adar': 'אדר'
+};
+
 const getHebrewMonthSpan = (date: Date) => {
     const startH = new HDate(startOfMonth(date));
     const endH = new HDate(endOfMonth(date));
@@ -386,14 +392,17 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete }: { events: Calen
             ) : (
               upcomingEvents.map((event) => {
                 const isToday = event.nextOccur.abs() === hDate.abs();
+                const monthName = event.nextOccur.getMonthName();
+                const monthLabel = hebrewMonthsRev[monthName] || event.nextOccur.getMonthName('h') || monthName;
                 return (
                 <div key={event.id} className={cn("group p-6 rounded-xl transition-all flex items-start gap-6 border shadow-sm", isToday ? "bg-blue-50 border-blue-200" : "bg-white border-transparent hover:bg-slate-50 hover:border-slate-200")}>
                   <div className={cn(
-                    "flex flex-col items-center justify-center w-16 h-16 rounded-lg shrink-0",
+                    "flex flex-col items-center justify-center w-20 h-20 rounded-lg shrink-0",
                     event.type === 'yahrzeit' ? "bg-purple-100 text-purple-800" : 
                     event.type === 'birthday' ? "bg-orange-100 text-orange-800" : "bg-blue-100 text-blue-800"
                   )}>
                     <span className="text-[10px] font-bold leading-none">{event.type === 'yahrzeit' ? 'אזכרה' : event.type === 'birthday' ? 'יום הולדת' : event.type === 'anniversary' ? 'יום נישואין' : event.type}</span>
+                    <span className="text-[10px] font-semibold mt-1 leading-none">{monthLabel}</span>
                     <span className="text-2xl font-extrabold mt-1 leading-none">{gematriya(event.nextOccur.getDate()) || event.hebrewDate.day}</span>
                   </div>
                   <div className="flex-1 text-right">
@@ -405,7 +414,7 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete }: { events: Calen
                       )}>
                         {event.type === 'yahrzeit' ? 'אזכרה' : event.type === 'birthday' ? 'יום הולדת' : event.type === 'anniversary' ? 'יום נישואין' : event.type}
                       </span>
-                      <span className="text-xs text-slate-500 font-medium">{gematriya(event.nextOccur.getDate())} {event.nextOccur.getMonthName('h')} {gematriya(event.nextOccur.getFullYear() % 1000)}</span>
+                      <span className="text-xs text-slate-500 font-medium">{gematriya(event.nextOccur.getDate())} {monthLabel} {gematriya(event.nextOccur.getFullYear() % 1000)}</span>
                     </div>
                     <h4 className="text-lg font-bold text-slate-900">{event.title}</h4>
                   </div>
@@ -552,11 +561,6 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
     return Array.from(new Set(events.map(e => e.type).filter(t => !['birthday', 'anniversary', 'yahrzeit'].includes(t))));
   }, [events]);
   
-  const hebrewMonthsRev: Record<string, string> = {
-      'Nisan': 'ניסן', 'Iyyar': 'אייר', 'Sivan': 'סיוון', 'Tamuz': 'תמוז', 'Av': 'אב', 'Elul': 'אלול',
-      'Tishrei': 'תשרי', 'Cheshvan': 'חשוון', 'Kislev': 'כסלו', 'Tevet': 'טבת', 'Shvat': 'שבט', 'Adar 1': 'אדר', 'Adar 2': 'אדר ב׳', 'Adar': 'אדר'
-  };
-
   const previewDate = useMemo(() => {
     if (formData.dateMode === 'hebrew') {
         try {
