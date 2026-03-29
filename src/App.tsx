@@ -64,6 +64,11 @@ type PersistedAppState = {
   exportSettings: ExportSettingsState;
 };
 
+type ImportPayload = {
+  events: CalendarEvent[];
+  exportSettings?: ExportSettingsState;
+};
+
 const DEFAULT_EXPORT_SETTINGS: ExportSettingsState = {
   selectedSchema: 'xml',
   reminderMode: 'none',
@@ -1194,12 +1199,52 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
   );
 };
 
-const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsChange }: { events: CalendarEvent[], onImport?: (events: CalendarEvent[]) => void, exportSettings: ExportSettingsState, onExportSettingsChange: React.Dispatch<React.SetStateAction<ExportSettingsState>> }) => {
+const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsChange }: { events: CalendarEvent[], onImport?: (payload: ImportPayload) => void, exportSettings: ExportSettingsState, onExportSettingsChange: React.Dispatch<React.SetStateAction<ExportSettingsState>> }) => {
   const selectedSchema = exportSettings.selectedSchema;
   const reminderMode = exportSettings.reminderMode;
   const uniqueEventTypes = useMemo(() => Array.from(new Set(events.map(e => e.type))), [events]);
   const selectedEventTypes = exportSettings.selectedEventTypes;
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const normalizeSchema = (schema: string | undefined): ExportSettingsState['selectedSchema'] => {
+    const value = (schema || '').toLowerCase();
+    if (value === 'ics' || value === 'json') return value;
+    return 'xml';
+  };
+
+  const normalizeReminderMode = (mode: string | undefined): ExportSettingsState['reminderMode'] => {
+    if (mode === 'day-before' || mode === 'week-before' || mode === 'both' || mode === 'none') {
+      return mode;
+    }
+    return 'none';
+  };
+
+  const normalizeReminderOverride = (mode: unknown): ReminderMode | undefined => {
+    if (mode === 'use-export-default' || mode === 'none' || mode === 'day-before' || mode === 'week-before' || mode === 'both') {
+      return mode;
+    }
+    return undefined;
+  };
+
+  const normalizeImportedEvents = (items: unknown[]): CalendarEvent[] => {
+    return items
+      .filter((item): item is CalendarEvent => {
+        const candidate = item as CalendarEvent;
+        return !!candidate && typeof candidate.title === 'string' && typeof candidate.type === 'string' && !!candidate.hebrewDate;
+      })
+      .map((event) => ({
+        id: event.id || Math.random().toString(36).substr(2, 9),
+        title: event.title,
+        type: event.type,
+        hebrewDate: {
+          day: Number(event.hebrewDate.day) || 1,
+          month: event.hebrewDate.month || 'ניסן',
+          year: Number(event.hebrewDate.year) || 5784,
+          afterSunset: !!event.hebrewDate.afterSunset
+        },
+        reminderOverride: normalizeReminderOverride(event.reminderOverride)
+      }));
+  };
 
   useEffect(() => {
     onExportSettingsChange((prev) => {
@@ -1229,7 +1274,17 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
         if (file.name.endsWith('.json')) {
           const data = JSON.parse(text);
           if (data.events && Array.isArray(data.events)) {
-            onImport?.(data.events);
+            const importedEvents = normalizeImportedEvents(data.events);
+            const importedSettings = data.export_settings
+              ? {
+                  selectedSchema: normalizeSchema(data.export_settings.selected_schema),
+                  reminderMode: normalizeReminderMode(data.export_settings.reminder_mode),
+                  selectedEventTypes: Array.isArray(data.export_settings.selected_event_types)
+                    ? data.export_settings.selected_event_types.filter((t: unknown) => typeof t === 'string')
+                    : []
+                }
+              : undefined;
+            onImport?.({ events: importedEvents, exportSettings: importedSettings });
           } else {
             alert('הקובץ אינו מכיל אירועים תקינים.');
           }
@@ -1238,11 +1293,24 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
           const xmlDoc = parser.parseFromString(text, "text/xml");
           const eventNodes = xmlDoc.getElementsByTagName("event");
           const newEvents: CalendarEvent[] = [];
+
+          const exportSettingsNode = xmlDoc.getElementsByTagName('export_settings')[0];
+          const importedSettings: ExportSettingsState | undefined = exportSettingsNode
+            ? {
+                selectedSchema: normalizeSchema(exportSettingsNode.getElementsByTagName('schema')[0]?.textContent || undefined),
+                reminderMode: normalizeReminderMode(exportSettingsNode.getElementsByTagName('reminder_mode')[0]?.textContent || undefined),
+                selectedEventTypes: (exportSettingsNode.getElementsByTagName('selected_event_types')[0]?.textContent || '')
+                  .split(',')
+                  .map(t => t.trim())
+                  .filter(t => !!t && t !== 'none')
+              }
+            : undefined;
+
           for (let i = 0; i < eventNodes.length; i++) {
             const title = eventNodes[i].getElementsByTagName("title")[0]?.textContent || "אירוע מיובא (XML)";
             const type = (eventNodes[i].getAttribute("type") as EventType) || "birthday";
-            
-            let hebrewDate = { day: 1, month: 'ניסן', year: 5784 };
+
+            let hebrewDate = { day: 1, month: 'ניסן', year: 5784, afterSunset: false };
             const hebrewNode = eventNodes[i].getElementsByTagName("hebrew")[0];
             if (hebrewNode && hebrewNode.textContent) {
               const parts = hebrewNode.textContent.trim().split(' ');
@@ -1250,41 +1318,80 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
                 hebrewDate = {
                   day: parseInt(parts[0]) || 1,
                   month: parts.slice(1, -1).join(' ') || 'ניסן',
-                  year: parseInt(parts[parts.length - 1]) || 5784
+                  year: parseInt(parts[parts.length - 1]) || 5784,
+                  afterSunset: false
                 };
               }
             }
+
+            const reminderOverrideNode = eventNodes[i].getElementsByTagName('reminder_override')[0]?.textContent || undefined;
+            const reminderOverride = normalizeReminderOverride(reminderOverrideNode);
 
             newEvents.push({
               id: Math.random().toString(36).substr(2, 9),
               title,
               type: type,
-              hebrewDate
+              hebrewDate,
+              reminderOverride
             });
           }
           if (newEvents.length > 0) {
-            onImport?.(newEvents);
+            onImport?.({ events: newEvents, exportSettings: importedSettings });
           } else {
             alert('לא נמצאו אירועים בקובץ ה-XML.');
           }
         } else if (file.name.endsWith('.ics')) {
-          const lines = text.split('\\n');
+          const lines = text.split(/\r?\n/);
           const newEvents: CalendarEvent[] = [];
-          
+
+          const importedSettings: ExportSettingsState = {
+            selectedSchema: 'ics',
+            reminderMode: 'none',
+            selectedEventTypes: []
+          };
+
           let currentEvent: Partial<CalendarEvent> | null = null;
           for (const line of lines) {
             const trimmed = line.trim();
-            if (trimmed === 'BEGIN:VEVENT') currentEvent = { id: Math.random().toString(36).substr(2, 9), type: 'birthday', hebrewDate: { day: 1, month: 'ניסן', year: 5784 } };
-            else if (trimmed === 'END:VEVENT' && currentEvent) {
+            if (trimmed.startsWith('X-EXPORT-SCHEMA:')) {
+              importedSettings.selectedSchema = normalizeSchema(trimmed.substring('X-EXPORT-SCHEMA:'.length));
+            } else if (trimmed.startsWith('X-EXPORT-EVENT-TYPES:')) {
+              importedSettings.selectedEventTypes = trimmed.substring('X-EXPORT-EVENT-TYPES:'.length)
+                .split(',')
+                .map(t => t.trim())
+                .filter(t => !!t && t !== 'none');
+            } else if (trimmed.startsWith('X-EXPORT-REMINDER-MODE:')) {
+              importedSettings.reminderMode = normalizeReminderMode(trimmed.substring('X-EXPORT-REMINDER-MODE:'.length));
+            } else if (trimmed === 'BEGIN:VEVENT') {
+              currentEvent = { id: Math.random().toString(36).substr(2, 9), type: 'birthday', hebrewDate: { day: 1, month: 'ניסן', year: 5784, afterSunset: false } };
+            } else if (trimmed === 'END:VEVENT' && currentEvent) {
               if (currentEvent.title) newEvents.push(currentEvent as CalendarEvent);
               currentEvent = null;
+            } else if (currentEvent && trimmed.startsWith('UID:')) {
+              currentEvent.id = trimmed.substring(4);
+            } else if (currentEvent && trimmed.startsWith('SUMMARY:')) {
+              currentEvent.title = trimmed.substring(8);
+            } else if (currentEvent && trimmed.startsWith('CATEGORIES:')) {
+              currentEvent.type = trimmed.substring(11);
+            } else if (currentEvent && trimmed.startsWith('X-HEBREW-DATE:')) {
+              const parts = trimmed.substring('X-HEBREW-DATE:'.length).split(' ');
+              if (parts.length >= 3) {
+                const day = parseInt(parts[0], 10);
+                const year = parseInt(parts[parts.length - 1], 10);
+                const month = parts.slice(1, parts.length - 1).join(' ');
+                if (!isNaN(day) && !isNaN(year) && month) {
+                  currentEvent.hebrewDate = { day, month, year, afterSunset: currentEvent.hebrewDate?.afterSunset ?? false };
+                }
+              }
+            } else if (currentEvent && trimmed.startsWith('X-AFTER-SUNSET:')) {
+              if (currentEvent.hebrewDate) currentEvent.hebrewDate.afterSunset = trimmed.substring('X-AFTER-SUNSET:'.length).toLowerCase() === 'true';
+            } else if (currentEvent && trimmed.startsWith('X-REMINDER-OVERRIDE:')) {
+              currentEvent.reminderOverride = normalizeReminderOverride(trimmed.substring('X-REMINDER-OVERRIDE:'.length));
             }
-            else if (currentEvent && trimmed.startsWith('SUMMARY:')) currentEvent.title = trimmed.substring(8);
-            else if (currentEvent && trimmed.startsWith('CATEGORIES:')) currentEvent.type = trimmed.substring(11);
           }
-          
+
           if (newEvents.length > 0) {
-            onImport?.(newEvents);
+            onImport?.({ events: newEvents, exportSettings: importedSettings });
           } else {
             alert('לא נמצאו אירועים בקובץ ה-ICS.');
           }
@@ -1736,9 +1843,16 @@ export default function App() {
     }
   };
 
-  const handleImportEvents = (importedEvents: CalendarEvent[]) => {
-    setEvents(importedEvents);
-    alert(`יובאו בהצלחה ${importedEvents.length} אירועים!`);
+  const handleImportEvents = (payload: ImportPayload) => {
+    setEvents(payload.events);
+    if (payload.exportSettings) {
+      setExportSettings({
+        selectedSchema: payload.exportSettings.selectedSchema,
+        reminderMode: payload.exportSettings.reminderMode,
+        selectedEventTypes: payload.exportSettings.selectedEventTypes
+      });
+    }
+    alert(`יובאו בהצלחה ${payload.events.length} אירועים!`);
   };
 
   const renderContent = () => {
