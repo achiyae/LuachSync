@@ -119,6 +119,10 @@ const escapeIcsText = (value: string) => value
   .replace(/,/g, '\\,')
   .replace(/\r?\n/g, '\\n');
 
+const normalizeImportedUid = (uid: string) => uid.replace(/(?:@hc4gc-source)+$/, '');
+
+const normalizeExportBaseId = (id: string) => id.replace(/(?:@hc4gc-source)+$/, '');
+
 const getHebrewMonthSpan = (date: Date) => {
     const startH = new HDate(startOfMonth(date));
     const endH = new HDate(endOfMonth(date));
@@ -1298,7 +1302,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
               currentEvent = null;
               currentEventHasHebrewDate = false;
             } else if (currentEvent && trimmed.startsWith('UID:')) {
-              currentEvent.id = trimmed.substring(4);
+              currentEvent.id = normalizeImportedUid(trimmed.substring(4));
             } else if (currentEvent && trimmed.startsWith('SUMMARY:')) {
               currentEvent.title = trimmed.substring(8);
             } else if (currentEvent && trimmed.startsWith('CATEGORIES:')) {
@@ -1416,14 +1420,14 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
     try {
       const month = hebrewToEnglishMonth[event.hebrewDate.month] || 'Nisan';
       const hd = new HDate(event.hebrewDate.day, month, event.hebrewDate.year);
-      const targetHd = event.hebrewDate.afterSunset ? hd.prev() : hd;
-      return targetHd.greg();
+      return hd.greg();
     } catch {
       return new Date();
     }
   };
 
   const icsConfigEvents = exportEvents.map(e => {
+    const exportBaseId = normalizeExportBaseId(e.id);
     const eventReminderMode = getEventReminderMode(e);
     const eventReminderRules = getEventReminderRules(e);
     const eventDate = resolveEventGregorianDate(e);
@@ -1438,7 +1442,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
     const reminderSection = icsReminders ? `${icsReminders}\n` : '';
 
     return `BEGIN:VEVENT
-UID:${e.id}@hc4gc-source
+UID:${exportBaseId}@hc4gc-source
 DTSTAMP:${dtStamp}
 DTSTART;VALUE=DATE:${dtStart}
 DTEND;VALUE=DATE:${dtEnd}
@@ -1453,19 +1457,19 @@ ${reminderSection}END:VEVENT`;
   }).join('\n');
 
   const icsGeneratedEvents = exportEvents.flatMap(e => {
+    const exportBaseId = normalizeExportBaseId(e.id);
     const eventReminderRules = getEventReminderRules(e);
     const eventTypeLabel = getEventTypeSyncLabel(e.type);
     const month = hebrewToEnglishMonth[e.hebrewDate.month] || 'Nisan';
     const eventsForHundredYears: string[] = [];
 
     for (let i = 0; i < 100; i++) {
-      const occurrence = i + 1;
+      const occurrence = i;
       const targetHebrewYear = e.hebrewDate.year + i;
 
       try {
         const hd = new HDate(e.hebrewDate.day, month, targetHebrewYear);
-        const targetHd = e.hebrewDate.afterSunset ? hd.prev() : hd;
-        const eventDate = targetHd.greg();
+        const eventDate = hd.greg();
         const dtStart = formatIcsDate(eventDate);
         const dtEnd = formatIcsDate(addDays(eventDate, 1));
         const dtStamp = formatIcsUtcDateTime(new Date());
@@ -1478,13 +1482,13 @@ ${reminderSection}END:VEVENT`;
         const reminderSection = icsReminders ? `${icsReminders}\n` : '';
 
         eventsForHundredYears.push(`BEGIN:VEVENT
-UID:${e.id}-${targetHebrewYear}-${occurrence}@hc4gc
+UID:${exportBaseId}-${targetHebrewYear}-${occurrence}@hc4gc
 DTSTAMP:${dtStamp}
 DTSTART;VALUE=DATE:${dtStart}
 DTEND;VALUE=DATE:${dtEnd}
 SUMMARY:${escapedSummary}
 CATEGORIES:${escapedCategory}
-      X-HC4GC-ENTRY-TYPE:GENERATED
+X-HC4GC-ENTRY-TYPE:GENERATED
 ${reminderSection}END:VEVENT`);
       } catch {
         // Skip invalid dates in years where the Hebrew date does not exist.
