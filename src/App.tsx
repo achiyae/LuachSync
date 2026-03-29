@@ -31,7 +31,7 @@ import {
   Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { HDate, Zmanim, Location, HebrewCalendar, getSedra, gematriya, gematriyaStrToNum } from '@hebcal/core';
+import { HDate, Zmanim, Location, HebrewCalendar, getSedra, gematriya, gematriyaStrToNum, flags } from '@hebcal/core';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addDays, getDay } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { cn } from './lib/utils';
@@ -769,11 +769,54 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
 const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   
+  const uniqueTypes = useMemo(() => Array.from(new Set(events.map(e => e.type))), [events]);
+
   const days = useMemo(() => {
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
     return eachDayOfInterval({ start, end });
   }, [currentMonth]);
+
+  const hebcalEvents = useMemo(() => {
+    const start = startOfMonth(currentMonth);
+    const end = endOfMonth(currentMonth);
+    const evs = HebrewCalendar.calendar({
+      start,
+      end,
+      il: true,
+    });
+    return evs.filter(ev => {
+      const f = ev.getFlags();
+      const desc = ev.getDesc();
+      // eslint-disable-next-line no-bitwise
+      return !(f & flags.PARSHA_HASHAVUA) && desc !== 'Candle lighting' && desc !== 'Havdalah';
+    });
+  }, [currentMonth]);
+
+  const nextHoliday = useMemo(() => {
+    const today = new Date();
+    const evs = HebrewCalendar.calendar({
+      start: today,
+      end: addMonths(today, 6),
+      il: true,
+    });
+    const holidaysList = evs.filter(ev => {
+      const f = ev.getFlags();
+      // eslint-disable-next-line no-bitwise
+      return (f & flags.CHAG) || (f & flags.ROSH_CHODESH) || (f & flags.MINOR_FAST) || (f & flags.MAJOR_FAST);
+    });
+    if (holidaysList.length > 0) {
+      const next = holidaysList[0];
+      const nextGreg = next.getDate().greg();
+      const daysUntil = Math.ceil((nextGreg.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      return {
+        name: next.render('he'),
+        daysUntil: Math.max(0, daysUntil),
+        gregDate: nextGreg
+      };
+    }
+    return null;
+  }, []);
 
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -806,9 +849,17 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
           {days.map((day, i) => {
             const hDate = new HDate(day);
             const isToday = isSameDay(day, new Date());
+            
+            const dayHebcalEvents = hebcalEvents.filter(ev => isSameDay(ev.getDate().greg(), day));
+            const dayUserEvents = events.filter(ev => {
+               const eventMonthStr = ev.hebrewDate.month;
+               const hDateMonthStr = hebrewMonthsMap[hDate.getMonthName()] || hDate.getMonthName();
+               return ev.hebrewDate.day === hDate.getDate() && eventMonthStr === hDateMonthStr;
+            });
+            
             return (
               <div key={i} className={cn(
-                "min-h-[120px] p-3 border-l border-b border-slate-50 hover:bg-slate-50 transition-colors flex flex-col gap-2 group",
+                "min-h-[120px] p-3 border-l border-b border-slate-50 hover:bg-slate-50 transition-colors flex flex-col gap-2 group relative",
                 isToday && "bg-blue-50/30 ring-1 ring-inset ring-blue-200"
               )}>
                 <div className="flex justify-between items-start">
@@ -818,10 +869,22 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
                   )}>{format(day, 'd')}</span>
                   <span className="text-[10px] font-bold text-slate-400">{hDate.renderGematriya()}</span>
                 </div>
-                <div className="flex flex-col gap-1">
-                  {/* Mock events for visual fidelity */}
-                  {i === 10 && <div className="text-[10px] px-2 py-0.5 bg-blue-600 text-white rounded-full truncate font-bold">ראש חודש</div>}
-                  {i === 22 && <div className="text-[10px] px-2 py-0.5 bg-red-600 text-white font-bold rounded-full truncate">פורים</div>}
+                <div className="flex flex-col gap-1 mt-1 overflow-y-auto max-h-[80px] scrollbar-hide">
+                  {dayHebcalEvents.map((ev, idx) => (
+                    <div key={`h-${idx}`} className="text-[10px] px-2 py-0.5 bg-blue-600 text-white rounded font-bold truncate">
+                      {ev.render('he')}
+                    </div>
+                  ))}
+                  {dayUserEvents.map((ev) => (
+                    <div key={`u-${ev.id}`} className={cn(
+                      "text-[10px] px-2 py-0.5 rounded truncate font-bold",
+                      ev.type === 'birthday' ? "bg-blue-300 text-blue-900" :
+                      ev.type === 'yahrzeit' ? "bg-red-600 text-white" :
+                      "bg-purple-300 text-purple-900"
+                    )} title={ev.title}>
+                      {ev.title}
+                    </div>
+                  ))}
                 </div>
               </div>
             );
@@ -834,10 +897,13 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
           <h3 className="text-[10px] uppercase tracking-widest font-bold text-slate-500">מקרא לוח השנה</h3>
           <div className="flex flex-wrap gap-2">
             {[
-              { color: 'bg-blue-600', label: 'חגים ומועדים' },
-              { color: 'bg-blue-300', label: 'ימי הולדת' },
-              { color: 'bg-red-600', label: 'אזכרות' },
-              { color: 'bg-purple-300', label: 'אישי' },
+              { type: 'holiday', color: 'bg-blue-600', label: 'חגים ומועדים' },
+              { type: 'birthday', color: 'bg-blue-300', label: 'ימי הולדת' },
+              { type: 'yahrzeit', color: 'bg-red-600', label: 'אזכרות' },
+              { type: 'anniversary', color: 'bg-purple-300', label: 'ימי נישואין' },
+              ...uniqueTypes.filter(t => !['birthday', 'yahrzeit', 'anniversary'].includes(t)).map(t => ({
+                type: t, color: 'bg-purple-300', label: t
+              }))
             ].map(item => (
               <div key={item.label} className="flex items-center gap-2 text-xs">
                 <span className={cn("w-3 h-3 rounded-full", item.color)}></span>
@@ -849,8 +915,10 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
         <div className="bg-slate-100 p-4 rounded-xl flex items-center justify-between group cursor-pointer hover:bg-slate-200 transition-colors">
           <div>
             <h3 className="text-[10px] uppercase tracking-widest font-bold text-slate-500">החג הבא</h3>
-            <p className="text-lg font-bold">פורים</p>
-            <p className="text-xs text-slate-500">עוד 13 ימים (23 במרץ)</p>
+            <p className="text-lg font-bold">{nextHoliday ? nextHoliday.name : 'אין קרוב'}</p>
+            {nextHoliday && <p className="text-xs text-slate-500">
+              {nextHoliday.daysUntil === 0 ? 'היום' : `עוד ${nextHoliday.daysUntil} ימים`} ({format(nextHoliday.gregDate, 'd בMMMM', { locale: he })})
+            </p>}
           </div>
           <ChevronLeft className="text-blue-600 group-hover:-translate-x-1 transition-transform" size={20} />
         </div>
