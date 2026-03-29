@@ -31,10 +31,35 @@ import {
   Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { HDate, Zmanim, Location, getSedra, gematriya, gematriyaStrToNum } from '@hebcal/core';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
+import { HDate, Zmanim, Location, HebrewCalendar, getSedra, gematriya, gematriyaStrToNum } from '@hebcal/core';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addDays, getDay } from 'date-fns';
+import { he } from 'date-fns/locale';
 import { cn } from './lib/utils';
 import { CalendarEvent, EventType } from './types';
+
+// --- Helpers ---
+const hebrewMonthsMap: Record<string, string> = {
+    'Nisan': 'ניסן', 'Iyyar': 'אייר', 'Sivan': 'סיוון', 'Tamuz': 'תמוז', 'Av': 'אב', 'Elul': 'אלול',
+    'Tishrei': 'תשרי', 'Cheshvan': 'חשוון', 'Heshvan': 'חשוון', 'Kislev': 'כסלו', 'Tevet': 'טבת', 
+    'Shvat': 'שבט', "Sh'vat": 'שבט', 'Adar 1': 'אדר א׳', 'Adar I': 'אדר א׳', 'Adar 2': 'אדר ב׳', 'Adar II': 'אדר ב׳', 'Adar': 'אדר'
+};
+
+const getHebrewMonthSpan = (date: Date) => {
+    const startH = new HDate(startOfMonth(date));
+    const endH = new HDate(endOfMonth(date));
+    const startHStr = hebrewMonthsMap[startH.getMonthName()] || startH.getMonthName();
+    const endHStr = hebrewMonthsMap[endH.getMonthName()] || endH.getMonthName();
+    const startYStr = gematriya(startH.getFullYear());
+    const endYStr = gematriya(endH.getFullYear());
+    
+    if (startHStr === endHStr) {
+      return `${startHStr} ${startYStr}`;
+    }
+    if (startYStr === endYStr) {
+      return `${startHStr}-${endHStr} ${startYStr}`;
+    }
+    return `${startHStr} ${startYStr} - ${endHStr} ${endYStr}`;
+};
 
 // --- Components ---
 
@@ -83,10 +108,6 @@ const Sidebar = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
           סנכרון לוח שנה
         </button>
         <button className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:text-blue-600 hover:bg-slate-200 rounded-lg transition-all text-right w-full">
-          <Settings size={18} />
-          <span className="text-sm tracking-wide">הגדרות</span>
-        </button>
-        <button className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:text-blue-600 hover:bg-slate-200 rounded-lg transition-all text-right w-full">
           <HelpCircle size={18} />
           <span className="text-sm tracking-wide">תמיכה</span>
         </button>
@@ -101,21 +122,7 @@ const TopBar = ({ title }: { title: string }) => {
       <div className="flex items-center gap-4">
         <h1 className="text-xl font-bold tracking-tight text-blue-900">{title}</h1>
       </div>
-      <div className="flex-1 max-w-xl mx-8">
-        <div className="relative flex items-center">
-          <Search className="absolute right-3 text-slate-400" size={18} />
-          <input 
-            className="w-full bg-slate-100 border-none rounded-full py-2 pr-10 pl-4 text-sm focus:ring-2 focus:ring-blue-500/20 transition-all text-right"
-            dir="rtl"
-            placeholder="חיפוש אירועים, תאריכים או שמות..."
-            type="text"
-          />
-        </div>
-      </div>
       <div className="flex items-center gap-4">
-        <button className="p-2 rounded-full hover:bg-slate-200/50 transition-colors text-slate-500">
-          <Bell size={20} />
-        </button>
         <button className="p-2 rounded-full hover:bg-slate-200/50 transition-colors text-slate-500">
           <HelpCircle size={20} />
         </button>
@@ -131,13 +138,28 @@ const TopBar = ({ title }: { title: string }) => {
 
 // --- Views ---
 
-const DashboardView = ({ events, onAddClick }: { events: CalendarEvent[], onAddClick: () => void }) => {
+const DashboardView = ({ events, onAddClick, onEdit, onDelete }: { events: CalendarEvent[], onAddClick: () => void, onEdit: (e: CalendarEvent) => void, onDelete: (id: string) => void }) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const hDate = new HDate(selectedDate);
   
   const [filterType, setFilterType] = useState<string | null>(null);
   const uniqueTypes = useMemo(() => Array.from(new Set(events.map(e => e.type))), [events]);
-  const filteredEvents = useMemo(() => filterType ? events.filter(e => e.type === filterType) : events, [events, filterType]);
+  const filteredEvents = useMemo(() => {
+    let result = events;
+    if (filterType) result = result.filter(e => e.type === filterType);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(e => 
+        e.title.toLowerCase().includes(q) || 
+        e.type.toLowerCase().includes(q) ||
+        (e.hebrewDate && e.hebrewDate.month.toLowerCase().includes(q)) ||
+        (e.hebrewDate && gematriya(e.hebrewDate.day).includes(q))
+      );
+    }
+    return result;
+  }, [events, filterType, searchQuery]);
 
   const upcomingEvents = useMemo(() => {
     const fromYear = hDate.getFullYear();
@@ -196,6 +218,36 @@ const DashboardView = ({ events, onAddClick }: { events: CalendarEvent[], onAddC
     }
   };
 
+  const shabbatZmanim = useMemo(() => {
+    const sun = addDays(selectedDate, -getDay(selectedDate));
+    const sat = addDays(selectedDate, 6 - getDay(selectedDate));
+    const loc = new Location(locationState.lat, locationState.long, true, locationState.tz, locationState.name, 'IL');
+    const options = {
+      start: sun,
+      end: sat,
+      candlelighting: true,
+      location: loc,
+      il: true,
+    };
+    const evs = HebrewCalendar.calendar(options);
+    const formatTimeStr = (d: Date | undefined) => d ? format(d, 'HH:mm') : '--:--';
+    
+    let candle = '--:--';
+    let havdalah = '--:--';
+    
+    for (const ev of evs) {
+      const desc = ev.getDesc();
+      if (desc === 'Candle lighting') {
+        // @ts-ignore
+        candle = formatTimeStr(ev.eventTime);
+      } else if (desc === 'Havdalah') {
+        // @ts-ignore
+        havdalah = formatTimeStr(ev.eventTime);
+      }
+    }
+    return { candle, havdalah };
+  }, [selectedDate, locationState]);
+
   const zmanim = useMemo(() => {
     const loc = new Location(locationState.lat, locationState.long, true, locationState.tz, locationState.name, 'IL');
     const z = new Zmanim(loc, selectedDate, false);
@@ -206,8 +258,10 @@ const DashboardView = ({ events, onAddClick }: { events: CalendarEvent[], onAddC
       sofZmanKriasShema: formatTime(z.sofZmanShmaMGA()),
       chatzos: formatTime(z.chatzot()),
       shkiya: formatTime(z.shkiah()),
+      candleLighting: shabbatZmanim.candle,
+      havdalah: shabbatZmanim.havdalah
     };
-  }, [selectedDate, locationState]);
+  }, [selectedDate, locationState, shabbatZmanim]);
 
   return (
     <div className="p-8 space-y-8">
@@ -216,13 +270,10 @@ const DashboardView = ({ events, onAddClick }: { events: CalendarEvent[], onAddC
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500 mb-1 font-semibold">השקפה יומית</p>
           <h2 className="text-4xl font-bold text-slate-900">{hDate.renderGematriya()}</h2>
           <p className="text-slate-500 font-medium">
-            {format(selectedDate, 'EEEE, d MMMM yyyy')} • פרשת {getSedra(hDate.getFullYear(), false).lookup(hDate)?.parsha?.join('-') || 'אין פרשה'}
+            {format(selectedDate, 'EEEE, d MMMM yyyy', { locale: he })} • פרשת {getSedra(hDate.getFullYear(), false).lookup(hDate)?.parsha?.join('-') || 'אין פרשה'}
           </p>
         </div>
         <div className="flex gap-3">
-          <button className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold text-sm hover:bg-slate-300 transition-colors">
-            תצוגת חודש
-          </button>
           <button 
             onClick={onAddClick}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold text-sm shadow-sm flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all"
@@ -233,20 +284,33 @@ const DashboardView = ({ events, onAddClick }: { events: CalendarEvent[], onAddC
         </div>
       </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-        <button 
-          onClick={() => setFilterType(null)}
-          className={cn("px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors", filterType === null ? "bg-blue-100 text-blue-800" : "bg-slate-200 text-slate-700 hover:bg-slate-300")}
-        >כל האירועים</button>
-        {uniqueTypes.map(t => (
+      <div className="flex flex-col gap-4">
+        <div className="relative w-full max-w-3xl">
+          <Search className="absolute right-4 top-3.5 text-slate-400" size={18} />
+          <input 
+            className="w-full bg-white border border-slate-200 shadow-sm rounded-xl py-3 pr-12 pl-4 text-sm focus:ring-2 focus:ring-blue-500/20 transition-all text-right"
+            dir="rtl"
+            placeholder="חיפוש אירועים, תאריכים או שמות..."
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide max-w-full">
           <button 
-            key={t}
-            onClick={() => setFilterType(t)}
-            className={cn("px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors", filterType === t ? "bg-blue-100 text-blue-800" : "bg-slate-200 text-slate-700 hover:bg-slate-300")}
-          >
-            {t === 'yahrzeit' ? 'אזכרות' : t === 'birthday' ? 'ימי הולדת' : t === 'anniversary' ? 'ימי נישואין' : t}
-          </button>
-        ))}
+            onClick={() => setFilterType(null)}
+            className={cn("px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors", filterType === null ? "bg-blue-100 text-blue-800" : "bg-slate-200 text-slate-700 hover:bg-slate-300")}
+          >כל האירועים</button>
+          {uniqueTypes.map(t => (
+            <button 
+              key={t}
+              onClick={() => setFilterType(t)}
+              className={cn("px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors", filterType === t ? "bg-blue-100 text-blue-800" : "bg-slate-200 text-slate-700 hover:bg-slate-300")}
+            >
+              {t === 'yahrzeit' ? 'אזכרות' : t === 'birthday' ? 'ימי הולדת' : t === 'anniversary' ? 'ימי נישואין' : t}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-12 gap-6">
@@ -283,10 +347,19 @@ const DashboardView = ({ events, onAddClick }: { events: CalendarEvent[], onAddC
                     </div>
                     <h4 className="text-lg font-bold text-slate-900">{event.title}</h4>
                   </div>
-                  <div className="shrink-0">
-                    <button className="p-2 text-slate-300 hover:text-blue-600 transition-colors">
+                  <div className="shrink-0 relative">
+                    <button 
+                      onClick={() => setOpenMenuId(openMenuId === event.id ? null : event.id)}
+                      onBlur={() => setTimeout(() => setOpenMenuId(null), 150)}
+                      className="p-2 text-slate-300 hover:text-blue-600 transition-colors focus:text-blue-600 focus:bg-slate-100 rounded-lg">
                       <MoreVertical size={18} />
                     </button>
+                    {openMenuId === event.id && (
+                      <div className="absolute left-0 top-full mt-1 bg-white border border-slate-200 shadow-xl rounded-lg py-1 w-32 z-10">
+                        <button onMouseDown={() => { onEdit(event); setOpenMenuId(null); }} className="w-full text-right px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-blue-600 font-medium">עריכה</button>
+                        <button onMouseDown={() => { onDelete(event.id); setOpenMenuId(null); }} className="w-full text-right px-4 py-2 text-xs text-red-600 hover:bg-red-50 font-medium">מחיקה</button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -298,11 +371,18 @@ const DashboardView = ({ events, onAddClick }: { events: CalendarEvent[], onAddC
         <div className="col-span-12 lg:col-span-4 space-y-6">
           <div className="bg-blue-50 p-6 rounded-xl space-y-4 border border-blue-100">
             <div className="flex justify-between items-center">
-              <div className="flex gap-2">
-                <ChevronRight onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))} className="text-slate-400 cursor-pointer hover:text-blue-600 transition-colors" size={18} />
-                <ChevronLeft onClick={() => setCalendarMonth(subMonths(calendarMonth, 1))} className="text-slate-400 cursor-pointer hover:text-blue-600 transition-colors" size={18} />
+              <div className="flex gap-1 bg-blue-100/50 p-1 rounded-lg">
+                <button onClick={() => setCalendarMonth(subMonths(calendarMonth, 1))} className="p-1 hover:bg-white rounded-md transition-colors text-slate-500 hover:text-blue-600 shadow-sm">
+                  <ChevronRight size={16} />
+                </button>
+                <button onClick={() => { setCalendarMonth(new Date()); setSelectedDate(new Date()); }} className="px-2 py-1 font-bold text-[11px] hover:bg-white rounded-md transition-colors text-slate-500 hover:text-blue-600 shadow-sm">
+                  היום
+                </button>
+                <button onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))} className="p-1 hover:bg-white rounded-md transition-colors text-slate-500 hover:text-blue-600 shadow-sm">
+                  <ChevronLeft size={16} />
+                </button>
               </div>
-              <h4 className="font-bold text-blue-900" dir="ltr">{format(calendarMonth, 'MMMM yyyy')} / {monthHDate.renderGematriya(true)}</h4>
+              <h4 className="font-bold text-blue-900" dir="ltr">{format(calendarMonth, 'MMMM yyyy', { locale: he })} / {getHebrewMonthSpan(calendarMonth)}</h4>
             </div>
             <div className="grid grid-cols-7 gap-2 text-center" dir="rtl">
               {['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'].map(day => (
@@ -373,6 +453,8 @@ const DashboardView = ({ events, onAddClick }: { events: CalendarEvent[], onAddC
                 { label: 'סוף זמן קריאת שמע', value: zmanim.sofZmanKriasShema },
                 { label: 'חצות היום', value: zmanim.chatzos },
                 { label: 'שקיעת החמה', value: zmanim.shkiya },
+                { label: 'כניסת שבת', value: zmanim.candleLighting },
+                { label: 'צאת שבת', value: zmanim.havdalah },
               ].map((item, idx) => (
                 <div key={idx} className="flex justify-between items-center py-2 border-b border-slate-50 last:border-0">
                   <span className="text-sm font-medium text-slate-700">{item.label}</span>
@@ -387,17 +469,17 @@ const DashboardView = ({ events, onAddClick }: { events: CalendarEvent[], onAddC
   );
 };
 
-const AddEventView = ({ events, onSave, onCancel }: { events: CalendarEvent[], onSave: (e: CalendarEvent) => void, onCancel: () => void }) => {
+const AddEventView = ({ events, initialData, onSave, onCancel }: { events: CalendarEvent[], initialData?: CalendarEvent | null, onSave: (e: CalendarEvent) => void, onCancel: () => void }) => {
   const [formData, setFormData] = useState({
-    title: '',
-    type: 'birthday' as EventType,
-    customType: '',
+    title: initialData?.title || '',
+    type: (['birthday', 'anniversary', 'yahrzeit'].includes(initialData?.type || '') ? initialData?.type : (initialData?.type ? 'custom' : 'birthday')) as EventType,
+    customType: !['birthday', 'anniversary', 'yahrzeit'].includes(initialData?.type || '') ? initialData?.type || '' : '',
     dateMode: 'hebrew' as 'hebrew' | 'gregorian',
-    day: 1,
-    month: 'ניסן',
-    yearStr: gematriya(5786) || 'תשפ״ו',
+    day: initialData?.hebrewDate.day || 1,
+    month: initialData?.hebrewDate.month || 'ניסן',
+    yearStr: initialData?.hebrewDate.year ? gematriya(initialData.hebrewDate.year) : (gematriya(5786) || 'תשפ״ו'),
     gregorianDate: format(new Date(), 'yyyy-MM-dd'),
-    afterSunset: false
+    afterSunset: initialData?.hebrewDate.afterSunset || false
   });
 
   const months = [
@@ -428,7 +510,7 @@ const AddEventView = ({ events, onSave, onCancel }: { events: CalendarEvent[], o
             const gregDate = targetHd.greg();
             return {
                 title: 'תאריך לועזי מחושב',
-                value: format(gregDate, 'd MMMM yyyy'),
+                value: format(gregDate, 'd MMMM yyyy', { locale: he }),
                 sedra: getSedra(y, true).lookup(hd)?.parsha?.join('-') || 'אין פרשה',
                 hd: hd,
                 previewDayStr: gematriya(formData.day),
@@ -470,9 +552,9 @@ const AddEventView = ({ events, onSave, onCancel }: { events: CalendarEvent[], o
     }
     
     onSave({
-      id: Math.random().toString(36).substr(2, 9),
-      title: formData.title,
-      type: formData.type === 'other' ? formData.customType : formData.type,
+      id: initialData?.id || Math.random().toString(36).substr(2, 9),
+      title: formData.title.trim(),
+      type: formData.type === 'custom' ? formData.customType.trim() : formData.type,
       hebrewDate: {
         day: d,
         month: hebrewMonthsRev[m] || 'ניסן',
@@ -700,8 +782,8 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
     <div className="p-6 flex-1 flex flex-col gap-6">
       <div className="flex items-end justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500 font-semibold mb-1">אדר א' - אדר ב' תשפ"ד</p>
-          <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">{format(currentMonth, 'MMMM yyyy')}</h2>
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-500 font-semibold mb-1">{getHebrewMonthSpan(currentMonth)}</p>
+          <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">{format(currentMonth, 'MMMM yyyy', { locale: he })}</h2>
         </div>
         <div className="flex gap-2 bg-slate-100 p-1 rounded-xl">
           <button onClick={prevMonth} className="p-2 hover:bg-white rounded-lg transition-colors shadow-sm">
@@ -812,11 +894,25 @@ const ImportExportView = ({ events, onImport }: { events: CalendarEvent[], onImp
           for (let i = 0; i < eventNodes.length; i++) {
             const title = eventNodes[i].getElementsByTagName("title")[0]?.textContent || "אירוע מיובא (XML)";
             const type = (eventNodes[i].getAttribute("type") as EventType) || "birthday";
+            
+            let hebrewDate = { day: 1, month: 'ניסן', year: 5784 };
+            const hebrewNode = eventNodes[i].getElementsByTagName("hebrew")[0];
+            if (hebrewNode && hebrewNode.textContent) {
+              const parts = hebrewNode.textContent.trim().split(' ');
+              if (parts.length >= 3) {
+                hebrewDate = {
+                  day: parseInt(parts[0]) || 1,
+                  month: parts.slice(1, -1).join(' ') || 'ניסן',
+                  year: parseInt(parts[parts.length - 1]) || 5784
+                };
+              }
+            }
+
             newEvents.push({
               id: Math.random().toString(36).substr(2, 9),
               title,
               type: type,
-              hebrewDate: { day: 1, month: 'ניסן', year: 5784 }
+              hebrewDate
             });
           }
           if (newEvents.length > 0) {
@@ -894,6 +990,7 @@ ${xmlEvents}
 UID:${e.id}
 SUMMARY:${e.title}
 CATEGORIES:${e.type}
+X-HEBREW-DATE:${e.hebrewDate.day} ${e.hebrewDate.month} ${e.hebrewDate.year}
 END:VEVENT`).join('\n');
 
   const icsPreview = `BEGIN:VCALENDAR
@@ -1083,10 +1180,27 @@ END:VCALENDAR`;
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
 
   const handleSaveEvent = (newEvent: CalendarEvent) => {
-    setEvents([...events, newEvent]);
+    if (editingEvent) {
+      setEvents(events.map(e => e.id === newEvent.id ? newEvent : e));
+      setEditingEvent(null);
+    } else {
+      setEvents([...events, newEvent]);
+    }
     setActiveTab('dashboard');
+  };
+
+  const handleEdit = (evt: CalendarEvent) => {
+    setEditingEvent(evt);
+    setActiveTab('add-event');
+  };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm('האם אתה בטוח שברצונך למחוק אירוע זה?')) {
+      setEvents(events.filter(e => e.id !== id));
+    }
   };
 
   const handleImportEvents = (importedEvents: CalendarEvent[]) => {
@@ -1097,15 +1211,23 @@ export default function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardView events={events} onAddClick={() => setActiveTab('add-event')} />;
+        return <DashboardView events={events} onAddClick={() => setActiveTab('add-event')} onEdit={handleEdit} onDelete={handleDelete} />;
       case 'calendar':
         return <CalendarView events={events} />;
       case 'add-event':
-        return <AddEventView events={events} onSave={handleSaveEvent} onCancel={() => setActiveTab('dashboard')} />;
+        return <AddEventView 
+                 events={events} 
+                 initialData={editingEvent}
+                 onSave={handleSaveEvent} 
+                 onCancel={() => {
+                   setEditingEvent(null);
+                   setActiveTab('dashboard');
+                 }} 
+               />;
       case 'import-export':
         return <ImportExportView events={events} onImport={handleImportEvents} />;
       default:
-        return <DashboardView events={events} onAddClick={() => setActiveTab('add-event')} />;
+        return <DashboardView events={events} onAddClick={() => setActiveTab('add-event')} onEdit={handleEdit} onDelete={handleDelete} />;
     }
   };
 
