@@ -53,6 +53,23 @@ const hebrewMonthsRev: Record<string, string> = {
 
 type ReminderRule = { id: string; label: string; trigger: string; time?: string };
 
+type ExportSettingsState = {
+  selectedSchema: 'xml' | 'ics' | 'json';
+  reminderMode: Exclude<ReminderMode, 'use-export-default'>;
+  selectedEventTypes: string[];
+};
+
+type PersistedAppState = {
+  events: CalendarEvent[];
+  exportSettings: ExportSettingsState;
+};
+
+const DEFAULT_EXPORT_SETTINGS: ExportSettingsState = {
+  selectedSchema: 'xml',
+  reminderMode: 'none',
+  selectedEventTypes: []
+};
+
 const REMINDER_MODE_OPTIONS: Array<{ id: ReminderMode; label: string; desc: string }> = [
   { id: 'use-export-default', label: 'השתמש בהגדרת הייצוא', desc: 'האירוע ישתמש בתזכורות שתוגדרנה במסך הייצוא.' },
   { id: 'none', label: 'ללא תזכורות', desc: 'האירוע הזה ייוצא ללא תזכורות, גם אם בייצוא מוגדר אחרת.' },
@@ -75,6 +92,13 @@ const buildReminderRules = (mode: ReminderMode): ReminderRule[] => {
     default:
       return [];
   }
+};
+
+const getEventTypeLabel = (type: string) => {
+  if (type === 'yahrzeit') return 'אזכרות';
+  if (type === 'birthday') return 'ימי הולדת';
+  if (type === 'anniversary') return 'ימי נישואין';
+  return type;
 };
 
 const getHebrewMonthSpan = (date: Date) => {
@@ -1151,18 +1175,30 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
   );
 };
 
-const ImportExportView = ({ events, onImport }: { events: CalendarEvent[], onImport?: (events: CalendarEvent[]) => void }) => {
-  const [selectedSchema, setSelectedSchema] = useState('xml');
-  const [reminderMode, setReminderMode] = useState<Exclude<ReminderMode, 'use-export-default'>>('none');
+const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsChange }: { events: CalendarEvent[], onImport?: (events: CalendarEvent[]) => void, exportSettings: ExportSettingsState, onExportSettingsChange: React.Dispatch<React.SetStateAction<ExportSettingsState>> }) => {
+  const selectedSchema = exportSettings.selectedSchema;
+  const reminderMode = exportSettings.reminderMode;
   const uniqueEventTypes = useMemo(() => Array.from(new Set(events.map(e => e.type))), [events]);
-  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
+  const selectedEventTypes = exportSettings.selectedEventTypes;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setSelectedEventTypes((prev) => {
-      const stillValid = prev.filter(type => uniqueEventTypes.includes(type));
+    onExportSettingsChange((prev) => {
+      const stillValid = prev.selectedEventTypes.filter(type => uniqueEventTypes.includes(type));
       const newTypes = uniqueEventTypes.filter(type => !stillValid.includes(type));
-      return [...stillValid, ...newTypes];
+      const nextSelected = prev.selectedEventTypes.length === 0
+        ? uniqueEventTypes
+        : [...stillValid, ...newTypes];
+
+      const isSame =
+        nextSelected.length === prev.selectedEventTypes.length &&
+        nextSelected.every((type, idx) => type === prev.selectedEventTypes[idx]);
+
+      if (isSame) {
+        return prev;
+      }
+
+      return { ...prev, selectedEventTypes: nextSelected };
     });
   }, [uniqueEventTypes]);
 
@@ -1257,9 +1293,12 @@ const ImportExportView = ({ events, onImport }: { events: CalendarEvent[], onImp
   };
 
   const toggleEventType = (type: string) => {
-    setSelectedEventTypes(prev => (
-      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
-    ));
+    onExportSettingsChange(prev => ({
+      ...prev,
+      selectedEventTypes: prev.selectedEventTypes.includes(type)
+        ? prev.selectedEventTypes.filter(t => t !== type)
+        : [...prev.selectedEventTypes, type]
+    }));
   };
 
   const exportEvents = useMemo(() => {
@@ -1280,7 +1319,7 @@ const ImportExportView = ({ events, onImport }: { events: CalendarEvent[], onImp
 
   const getEventReminderRules = (event: CalendarEvent) => buildReminderRules(getEventReminderMode(event));
 
-  const exportSettings = {
+  const exportSettingsPayload = {
     selected_schema: selectedSchema,
     selected_event_types: selectedEventTypes,
     reminder_mode: reminderMode,
@@ -1371,7 +1410,7 @@ END:VCALENDAR`;
       scope: "5784",
       location: "Jerusalem"
     },
-    export_settings: exportSettings,
+    export_settings: exportSettingsPayload,
     events: exportEvents.map(event => ({
       ...event,
       effectiveReminderMode: getEventReminderMode(event),
@@ -1442,7 +1481,7 @@ END:VCALENDAR`;
                           selected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
                         )}
                       >
-                        {type}
+                        {getEventTypeLabel(type)}
                         {selected ? <Check size={14} /> : <Plus size={14} />}
                       </button>
                     );
@@ -1462,7 +1501,7 @@ END:VCALENDAR`;
                     <button
                       key={option.id}
                       type="button"
-                      onClick={() => setReminderMode(option.id as Exclude<ReminderMode, 'use-export-default'>)}
+                      onClick={() => onExportSettingsChange(prev => ({ ...prev, reminderMode: option.id as Exclude<ReminderMode, 'use-export-default'> }))}
                       className={cn(
                         "text-right p-3 rounded-lg border transition-colors",
                         reminderMode === option.id ? "border-blue-600 bg-blue-50" : "border-slate-200 hover:bg-slate-50"
@@ -1494,7 +1533,7 @@ END:VCALENDAR`;
                     name="schema" 
                     className="text-blue-600 focus:ring-blue-500 w-4 h-4 ml-4" 
                     checked={selectedSchema === schema.id}
-                    onChange={() => setSelectedSchema(schema.id)} 
+                    onChange={() => onExportSettingsChange(prev => ({ ...prev, selectedSchema: schema.id as ExportSettingsState['selectedSchema'] }))} 
                   />
                   <div>
                     <span className="block text-sm font-bold text-slate-900">{schema.label}</span>
@@ -1575,29 +1614,68 @@ END:VCALENDAR`;
 // --- Main App ---
 
 export default function App() {
-  const EVENTS_STORAGE_KEY = 'hc4gc.events.v1';
+  const APP_STORAGE_KEY = 'hc4gc.appState.v1';
+  const LEGACY_EVENTS_STORAGE_KEY = 'hc4gc.events.v1';
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [events, setEvents] = useState<CalendarEvent[]>(() => {
+  const [appState, setAppState] = useState<PersistedAppState>(() => {
     try {
-      const raw = window.localStorage.getItem(EVENTS_STORAGE_KEY);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
+      const raw = window.localStorage.getItem(APP_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<PersistedAppState>;
+        return {
+          events: Array.isArray(parsed.events) ? parsed.events : [],
+          exportSettings: {
+            ...DEFAULT_EXPORT_SETTINGS,
+            ...(parsed.exportSettings || {}),
+            selectedEventTypes: Array.isArray(parsed.exportSettings?.selectedEventTypes) ? parsed.exportSettings.selectedEventTypes : []
+          }
+        };
+      }
+
+      // Backward compatibility with previous events-only storage.
+      const legacyRaw = window.localStorage.getItem(LEGACY_EVENTS_STORAGE_KEY);
+      if (legacyRaw) {
+        const parsedLegacy = JSON.parse(legacyRaw);
+        return {
+          events: Array.isArray(parsedLegacy) ? parsedLegacy : [],
+          exportSettings: DEFAULT_EXPORT_SETTINGS
+        };
+      }
     } catch {
-      return [];
+      // Ignore storage parse errors and continue with defaults.
     }
+    return {
+      events: [],
+      exportSettings: DEFAULT_EXPORT_SETTINGS
+    };
   });
+  const events = appState.events;
+  const exportSettings = appState.exportSettings;
+  const setEvents: React.Dispatch<React.SetStateAction<CalendarEvent[]>> = (updater) => {
+    setAppState(prev => ({
+      ...prev,
+      events: typeof updater === 'function' ? (updater as (prevEvents: CalendarEvent[]) => CalendarEvent[])(prev.events) : updater
+    }));
+  };
+  const setExportSettings: React.Dispatch<React.SetStateAction<ExportSettingsState>> = (updater) => {
+    setAppState(prev => ({
+      ...prev,
+      exportSettings: typeof updater === 'function'
+        ? (updater as (prevExportSettings: ExportSettingsState) => ExportSettingsState)(prev.exportSettings)
+        : updater
+    }));
+  };
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(events));
+      window.localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(appState));
     } catch {
       // Ignore storage errors (private mode/quota issues) and keep app functional.
     }
-  }, [events]);
+  }, [appState]);
 
   useEffect(() => {
     document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';
@@ -1661,7 +1739,7 @@ export default function App() {
                  }} 
                />;
       case 'import-export':
-        return <ImportExportView events={events} onImport={handleImportEvents} />;
+        return <ImportExportView events={events} onImport={handleImportEvents} exportSettings={exportSettings} onExportSettingsChange={setExportSettings} />;
       default:
         return <DashboardView events={events} onAddClick={() => setActiveTab('add-event')} onEdit={handleEdit} onDelete={handleDelete} onClearAll={handleClearAll} />;
     }
