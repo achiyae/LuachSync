@@ -829,6 +829,12 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
 
 const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedCalendarItem, setSelectedCalendarItem] = useState<{
+    title: string;
+    dayLabel: string;
+    kind: 'holiday' | 'user';
+    typeLabel?: string;
+  } | null>(null);
   
   const uniqueTypes = useMemo(() => Array.from(new Set(events.map(e => e.type))), [events]);
 
@@ -882,6 +888,15 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
 
+  useEffect(() => {
+    if (!selectedCalendarItem) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedCalendarItem(null);
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [selectedCalendarItem]);
+
   return (
     <div className="p-6 flex-1 flex flex-col gap-6">
       <div className="flex items-end justify-between">
@@ -932,19 +947,37 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
                 </div>
                 <div className="flex flex-col gap-1 mt-1 overflow-y-auto max-h-[80px] scrollbar-hide">
                   {dayHebcalEvents.map((ev, idx) => (
-                    <div key={`h-${idx}`} className="text-[10px] px-2 py-0.5 bg-blue-600 text-white rounded font-bold truncate">
+                    <button
+                      key={`h-${idx}`}
+                      type="button"
+                      onClick={() => setSelectedCalendarItem({
+                        title: ev.render('he'),
+                        dayLabel: `${format(day, 'd/M')} • ${hDate.renderGematriya()}`,
+                        kind: 'holiday'
+                      })}
+                      className="w-full text-[10px] text-right px-2 py-0.5 bg-blue-600 text-white rounded font-bold truncate hover:opacity-90 transition-opacity"
+                    >
                       {ev.render('he')}
-                    </div>
+                    </button>
                   ))}
                   {dayUserEvents.map((ev) => (
-                    <div key={`u-${ev.id}`} className={cn(
-                      "text-[10px] px-2 py-0.5 rounded truncate font-bold",
+                    <button
+                      key={`u-${ev.id}`}
+                      type="button"
+                      onClick={() => setSelectedCalendarItem({
+                        title: ev.title,
+                        dayLabel: `${format(day, 'd/M')} • ${hDate.renderGematriya()}`,
+                        kind: 'user',
+                        typeLabel: ev.type
+                      })}
+                      className={cn(
+                      "w-full text-[10px] text-right px-2 py-0.5 rounded truncate font-bold hover:opacity-90 transition-opacity",
                       ev.type === 'birthday' ? "bg-blue-300 text-blue-900" :
                       ev.type === 'yahrzeit' ? "bg-red-600 text-white" :
                       "bg-purple-300 text-purple-900"
                     )} title={ev.title}>
                       {ev.title}
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -995,6 +1028,58 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {selectedCalendarItem && (
+          <>
+            <motion.button
+              type="button"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedCalendarItem(null)}
+              className="fixed inset-0 z-[70] bg-slate-900/40 backdrop-blur-[1px]"
+              aria-label="סגור פרטי אירוע"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-x-3 bottom-3 sm:inset-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[28rem] z-[71] bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 text-right"
+              dir="rtl"
+            >
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-widest text-slate-500 font-bold">{selectedCalendarItem.dayLabel}</p>
+                  <h3 className="text-lg font-extrabold text-slate-900 leading-tight mt-1 break-words">{selectedCalendarItem.title}</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCalendarItem(null)}
+                  className="shrink-0 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold transition-colors"
+                >
+                  סגור
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-2 mt-4">
+                <span className={cn(
+                  "px-2.5 py-1 rounded-full text-xs font-bold",
+                  selectedCalendarItem.kind === 'holiday' ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-700"
+                )}>
+                  {selectedCalendarItem.kind === 'holiday' ? 'חג או מועד' : 'אירוע אישי'}
+                </span>
+                {selectedCalendarItem.typeLabel && (
+                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+                    {selectedCalendarItem.typeLabel}
+                  </span>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
