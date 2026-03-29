@@ -106,6 +106,19 @@ const getEventTypeLabel = (type: string) => {
   return type;
 };
 
+const getEventTypeSyncLabel = (type: string) => {
+  if (type === 'yahrzeit') return 'אזכרה';
+  if (type === 'birthday') return 'יום הולדת';
+  if (type === 'anniversary') return 'יום נישואין';
+  return type;
+};
+
+const escapeIcsText = (value: string) => value
+  .replace(/\\/g, '\\\\')
+  .replace(/;/g, '\\;')
+  .replace(/,/g, '\\,')
+  .replace(/\r?\n/g, '\\n');
+
 const getHebrewMonthSpan = (date: Date) => {
     const startH = new HDate(startOfMonth(date));
     const endH = new HDate(endOfMonth(date));
@@ -207,15 +220,6 @@ const Sidebar = ({ activeTab, setActiveTab, isCollapsed, onToggleCollapse, isMob
       </nav>
 
       <div className="mt-auto border-t border-slate-200 pt-4 flex flex-col gap-1">
-        <button
-          title="סנכרון לוח שנה"
-          className={cn(
-            "w-full mb-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 active:scale-95 transition-all",
-            isCollapsed && "px-0"
-          )}
-        >
-          {isCollapsed ? <ArrowLeftRight size={18} className="mx-auto" /> : 'סנכרון לוח שנה'}
-        </button>
         <button
           title="תמיכה"
           className={cn(
@@ -1276,6 +1280,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
           };
 
           let currentEvent: Partial<CalendarEvent> | null = null;
+          let currentEventHasHebrewDate = false;
           for (const line of lines) {
             const trimmed = line.trim();
             if (trimmed.startsWith('X-EXPORT-EVENT-TYPES:')) {
@@ -1287,9 +1292,11 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
               importedSettings.reminderMode = normalizeReminderMode(trimmed.substring('X-EXPORT-REMINDER-MODE:'.length));
             } else if (trimmed === 'BEGIN:VEVENT') {
               currentEvent = { id: Math.random().toString(36).substr(2, 9), type: 'birthday', hebrewDate: { day: 1, month: 'ניסן', year: 5784, afterSunset: false } };
+              currentEventHasHebrewDate = false;
             } else if (trimmed === 'END:VEVENT' && currentEvent) {
-              if (currentEvent.title) newEvents.push(currentEvent as CalendarEvent);
+              if (currentEvent.title && currentEventHasHebrewDate) newEvents.push(currentEvent as CalendarEvent);
               currentEvent = null;
+              currentEventHasHebrewDate = false;
             } else if (currentEvent && trimmed.startsWith('UID:')) {
               currentEvent.id = trimmed.substring(4);
             } else if (currentEvent && trimmed.startsWith('SUMMARY:')) {
@@ -1304,6 +1311,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
                 const month = parts.slice(1, parts.length - 1).join(' ');
                 if (!isNaN(day) && !isNaN(year) && month) {
                   currentEvent.hebrewDate = { day, month, year, afterSunset: currentEvent.hebrewDate?.afterSunset ?? false };
+                  currentEventHasHebrewDate = true;
                 }
               }
             } else if (currentEvent && trimmed.startsWith('X-AFTER-SUNSET:')) {
@@ -1319,7 +1327,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
             alert('לא נמצאו אירועים בקובץ ה-ICS.');
           }
         } else {
-          alert('פורמט קובץ לא נתמך. נא להעלות קובץ מסוג .json, .xml או .ics');
+          alert('פורמט קובץ לא נתמך. נא להעלות קובץ מסוג .ics');
         }
       } catch (err) {
         alert('שגיאה בפענוח הקובץ.');
@@ -1370,21 +1378,90 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
 
   const now = new Date().toISOString();
 
-  const icsEvents = exportEvents.map(e => {
-    const eventReminderMode = getEventReminderMode(e);
-    const eventReminderRules = getEventReminderRules(e);
-    const icsReminders = eventReminderRules.map(rule => `BEGIN:VALARM\nACTION:DISPLAY\nDESCRIPTION:Reminder: ${e.title}\nTRIGGER:${rule.trigger}${rule.time ? `\nX-REMINDER-TIME:${rule.time}` : ''}\nEND:VALARM`).join('\n');
-    const reminderSection = icsReminders ? `${icsReminders}\n` : '';
+  const hebrewToEnglishMonth: Record<string, string> = {
+    'ניסן': 'Nisan',
+    'אייר': 'Iyyar',
+    'סיוון': 'Sivan',
+    'תמוז': 'Tamuz',
+    'אב': 'Av',
+    'אלול': 'Elul',
+    'תשרי': 'Tishrei',
+    'חשוון': 'Cheshvan',
+    'כסלו': 'Kislev',
+    'טבת': 'Tevet',
+    'שבט': 'Shvat',
+    'אדר': 'Adar 1',
+    'אדר א׳': 'Adar 1',
+    'אדר ב׳': 'Adar 2'
+  };
 
-    return `BEGIN:VEVENT
-UID:${e.id}
-SUMMARY:${e.title}
-CATEGORIES:${e.type}
-X-HEBREW-DATE:${e.hebrewDate.day} ${e.hebrewDate.month} ${e.hebrewDate.year}
-X-AFTER-SUNSET:${e.hebrewDate.afterSunset ? 'true' : 'false'}
-X-REMINDER-OVERRIDE:${e.reminderOverride || 'use-export-default'}
-X-EFFECTIVE-REMINDER-MODE:${eventReminderMode}
-${reminderSection}END:VEVENT`;
+  const formatIcsDate = (date: Date) => {
+    const y = date.getFullYear();
+    const m = `${date.getMonth() + 1}`.padStart(2, '0');
+    const d = `${date.getDate()}`.padStart(2, '0');
+    return `${y}${m}${d}`;
+  };
+
+  const formatIcsUtcDateTime = (date: Date) => {
+    const y = date.getUTCFullYear();
+    const m = `${date.getUTCMonth() + 1}`.padStart(2, '0');
+    const d = `${date.getUTCDate()}`.padStart(2, '0');
+    const hh = `${date.getUTCHours()}`.padStart(2, '0');
+    const mm = `${date.getUTCMinutes()}`.padStart(2, '0');
+    const ss = `${date.getUTCSeconds()}`.padStart(2, '0');
+    return `${y}${m}${d}T${hh}${mm}${ss}Z`;
+  };
+
+  const resolveEventGregorianDate = (event: CalendarEvent) => {
+    try {
+      const month = hebrewToEnglishMonth[event.hebrewDate.month] || 'Nisan';
+      const hd = new HDate(event.hebrewDate.day, month, event.hebrewDate.year);
+      const targetHd = event.hebrewDate.afterSunset ? hd.prev() : hd;
+      return targetHd.greg();
+    } catch {
+      return new Date();
+    }
+  };
+
+  const icsEvents = exportEvents.flatMap(e => {
+    const eventReminderRules = getEventReminderRules(e);
+    const eventTypeLabel = getEventTypeSyncLabel(e.type);
+    const month = hebrewToEnglishMonth[e.hebrewDate.month] || 'Nisan';
+    const eventsForHundredYears: string[] = [];
+
+    for (let i = 0; i < 100; i++) {
+      const occurrence = i + 1;
+      const targetHebrewYear = e.hebrewDate.year + i;
+
+      try {
+        const hd = new HDate(e.hebrewDate.day, month, targetHebrewYear);
+        const targetHd = e.hebrewDate.afterSunset ? hd.prev() : hd;
+        const eventDate = targetHd.greg();
+        const dtStart = formatIcsDate(eventDate);
+        const dtEnd = formatIcsDate(addDays(eventDate, 1));
+        const dtStamp = formatIcsUtcDateTime(new Date());
+        const summary = `${eventTypeLabel} ל${e.title} (${occurrence})`;
+        const escapedSummary = escapeIcsText(summary);
+        const escapedCategory = escapeIcsText(e.type);
+        const icsReminders = eventReminderRules
+          .map(rule => `BEGIN:VALARM\nACTION:DISPLAY\nDESCRIPTION:${escapedSummary}\nTRIGGER:${rule.trigger}${rule.time ? `\nX-REMINDER-TIME:${rule.time}` : ''}\nEND:VALARM`)
+          .join('\n');
+        const reminderSection = icsReminders ? `${icsReminders}\n` : '';
+
+        eventsForHundredYears.push(`BEGIN:VEVENT
+UID:${e.id}-${targetHebrewYear}-${occurrence}@hc4gc
+DTSTAMP:${dtStamp}
+DTSTART;VALUE=DATE:${dtStart}
+DTEND;VALUE=DATE:${dtEnd}
+SUMMARY:${escapedSummary}
+CATEGORIES:${escapedCategory}
+${reminderSection}END:VEVENT`);
+      } catch {
+        // Skip invalid dates in years where the Hebrew date does not exist.
+      }
+    }
+
+    return eventsForHundredYears;
   }).join('\n');
 
   const icsGlobalReminderIds = reminderRules.map(rule => rule.id).join(',') || 'none';
@@ -1402,17 +1479,28 @@ END:VCALENDAR`;
 
   const previews = { ics: icsPreview };
 
-  const handleDownload = () => {
-    const content = previews[selectedSchema];
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const downloadIcsFile = (fileName?: string) => {
+    const content = previews.ics;
+    const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `calendar_export.${selectedSchema}`;
+    link.download = fileName || 'calendar_export.ics';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const handleDownload = () => {
+    downloadIcsFile();
+  };
+
+  const handleGoogleCalendarSync = () => {
+    const fileStamp = new Date().toISOString().replace(/[:.]/g, '-');
+    downloadIcsFile(`hc4gc_sync_${fileStamp}.ics`);
+    window.open('https://calendar.google.com/calendar/u/0/r/settings/export', '_blank', 'noopener,noreferrer');
+    alert('קובץ ICS נוצר והורד. בחלון גוגל קלנדר שנפתח, בחר Import ובחר את הקובץ שהורד.');
   };
 
   const handleCopy = () => {
@@ -1425,7 +1513,7 @@ END:VCALENDAR`;
       <div className="mb-8 text-right">
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">כלי ניהול נתונים</p>
         <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-2">ייצוא וייבוא נתוני לוח שנה</h1>
-        <p className="text-slate-500 max-w-2xl">נהל את המידע הליטורגי שלך בדיוק מרבי. הורד נתונים בפורמטים תקניים או ייבא קבצי XML קיימים לעיבוד במערכת.</p>
+        <p className="text-slate-500 max-w-2xl">נהל את המידע הליטורגי שלך בדיוק מרבי. הורד וייבא נתונים בפורמט iCalendar (ICS) לעבודה מול יומן גוגל.</p>
       </div>
 
       <div className="grid grid-cols-12 gap-6 items-start">
@@ -1516,12 +1604,16 @@ END:VCALENDAR`;
                <Download className="group-hover:translate-y-1 transition-transform" size={20} />
               בצע הורדת נתונים
             </button>
+              <button onClick={handleGoogleCalendarSync} className="w-full mt-3 bg-white border border-blue-200 text-blue-700 p-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-sm hover:bg-blue-50 active:scale-[0.98] transition-all group">
+                <ArrowLeftRight className="group-hover:rotate-6 transition-transform" size={20} />
+                סנכרון לוח שנה
+              </button>
             <p className="text-center mt-3 text-[11px] text-slate-400 uppercase tracking-widest opacity-60">נפח משוער: 442 KB</p>
            </div>
          </div>
 
-         <div className="col-span-12 lg:col-span-7 flex flex-col h-full min-h-[600px]">
-           <div className="flex-1 bg-slate-900 rounded-xl overflow-hidden shadow-2xl flex flex-col">
+         <div className="col-span-12 lg:col-span-7 flex flex-col h-full min-h-0">
+           <div className="h-[560px] lg:h-[calc(100vh-210px)] bg-slate-900 rounded-xl overflow-hidden shadow-2xl flex flex-col min-h-0">
              <div className="bg-white/5 px-6 py-4 flex items-center justify-between border-b border-white/5">
               <div className="flex items-center gap-2">
                 <div className="flex gap-1.5">
@@ -1535,7 +1627,7 @@ END:VCALENDAR`;
                 <Copy size={18} />
               </button>
             </div>
-             <div className="p-8 font-mono text-sm leading-relaxed text-blue-100/80 overflow-y-auto h-full text-left" dir="ltr">
+             <div className="p-8 font-mono text-sm leading-relaxed text-blue-100/80 overflow-auto flex-1 min-h-0 text-left" dir="ltr">
               <pre><code>{previews[selectedSchema]}</code></pre>
             </div>
             <div className="mt-auto bg-white/5 px-6 py-3 flex items-center gap-4 border-t border-white/5">
@@ -1547,7 +1639,7 @@ END:VCALENDAR`;
              <Info className="text-blue-600 shrink-0" size={20} />
              <p className="text-xs text-slate-600 leading-relaxed">
               <strong className="text-slate-900 block mb-1">הערת מפתח</strong>
-               סכמת XML זו משתמשת בתקן ISO 8601 עבור ערכי זמן ובהרחבות מותאמות אישית עבור תאריכים ליטורגיים עבריים. לשילוב קל עם יומנים אישיים, מומלץ להשתמש בפורמט iCalendar החדש שהוספנו.
+               כפתור הסנכרון יוצר קובץ ICS לפי הגדרות הייצוא שבחרת ופותח את מסך הייבוא של Google Calendar כדי להשלים את הייבוא.
              </p>
            </div>
          </div>
