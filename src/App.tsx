@@ -472,8 +472,8 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete }: { events: Calen
 const AddEventView = ({ events, initialData, onSave, onCancel }: { events: CalendarEvent[], initialData?: CalendarEvent | null, onSave: (e: CalendarEvent) => void, onCancel: () => void }) => {
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
-    type: (['birthday', 'anniversary', 'yahrzeit'].includes(initialData?.type || '') ? initialData?.type : (initialData?.type ? 'custom' : 'birthday')) as EventType,
-    customType: !['birthday', 'anniversary', 'yahrzeit'].includes(initialData?.type || '') ? initialData?.type || '' : '',
+    type: (initialData?.type || 'birthday') as EventType,
+    customType: '',
     dateMode: 'hebrew' as 'hebrew' | 'gregorian',
     day: initialData?.hebrewDate.day || 1,
     month: initialData?.hebrewDate.month || 'ניסן',
@@ -554,7 +554,7 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
     onSave({
       id: initialData?.id || Math.random().toString(36).substr(2, 9),
       title: formData.title.trim(),
-      type: formData.type === 'custom' ? formData.customType.trim() : formData.type,
+      type: formData.type === 'other' ? formData.customType.trim() : formData.type,
       hebrewDate: {
         day: d,
         month: hebrewMonthsRev[m] || 'ניסן',
