@@ -54,7 +54,7 @@ const hebrewMonthsRev: Record<string, string> = {
 type ReminderRule = { id: string; label: string; trigger: string; time?: string };
 
 type ExportSettingsState = {
-  selectedSchema: 'xml' | 'ics' | 'json';
+  selectedSchema: 'ics';
   reminderMode: Exclude<ReminderMode, 'use-export-default'>;
   selectedEventTypes: string[];
 };
@@ -70,7 +70,7 @@ type ImportPayload = {
 };
 
 const DEFAULT_EXPORT_SETTINGS: ExportSettingsState = {
-  selectedSchema: 'xml',
+  selectedSchema: 'ics',
   reminderMode: 'none',
   selectedEventTypes: []
 };
@@ -1206,12 +1206,6 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
   const selectedEventTypes = exportSettings.selectedEventTypes;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const normalizeSchema = (schema: string | undefined): ExportSettingsState['selectedSchema'] => {
-    const value = (schema || '').toLowerCase();
-    if (value === 'ics' || value === 'json') return value;
-    return 'xml';
-  };
-
   const normalizeReminderMode = (mode: string | undefined): ExportSettingsState['reminderMode'] => {
     if (mode === 'day-before' || mode === 'week-before' || mode === 'both' || mode === 'none') {
       return mode;
@@ -1271,76 +1265,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
     reader.onload = (e) => {
       const text = e.target?.result as string;
       try {
-        if (file.name.endsWith('.json')) {
-          const data = JSON.parse(text);
-          if (data.events && Array.isArray(data.events)) {
-            const importedEvents = normalizeImportedEvents(data.events);
-            const importedSettings = data.export_settings
-              ? {
-                  selectedSchema: normalizeSchema(data.export_settings.selected_schema),
-                  reminderMode: normalizeReminderMode(data.export_settings.reminder_mode),
-                  selectedEventTypes: Array.isArray(data.export_settings.selected_event_types)
-                    ? data.export_settings.selected_event_types.filter((t: unknown) => typeof t === 'string')
-                    : []
-                }
-              : undefined;
-            onImport?.({ events: importedEvents, exportSettings: importedSettings });
-          } else {
-            alert('הקובץ אינו מכיל אירועים תקינים.');
-          }
-        } else if (file.name.endsWith('.xml')) {
-          const parser = new DOMParser();
-          const xmlDoc = parser.parseFromString(text, "text/xml");
-          const eventNodes = xmlDoc.getElementsByTagName("event");
-          const newEvents: CalendarEvent[] = [];
-
-          const exportSettingsNode = xmlDoc.getElementsByTagName('export_settings')[0];
-          const importedSettings: ExportSettingsState | undefined = exportSettingsNode
-            ? {
-                selectedSchema: normalizeSchema(exportSettingsNode.getElementsByTagName('schema')[0]?.textContent || undefined),
-                reminderMode: normalizeReminderMode(exportSettingsNode.getElementsByTagName('reminder_mode')[0]?.textContent || undefined),
-                selectedEventTypes: (exportSettingsNode.getElementsByTagName('selected_event_types')[0]?.textContent || '')
-                  .split(',')
-                  .map(t => t.trim())
-                  .filter(t => !!t && t !== 'none')
-              }
-            : undefined;
-
-          for (let i = 0; i < eventNodes.length; i++) {
-            const title = eventNodes[i].getElementsByTagName("title")[0]?.textContent || "אירוע מיובא (XML)";
-            const type = (eventNodes[i].getAttribute("type") as EventType) || "birthday";
-
-            let hebrewDate = { day: 1, month: 'ניסן', year: 5784, afterSunset: false };
-            const hebrewNode = eventNodes[i].getElementsByTagName("hebrew")[0];
-            if (hebrewNode && hebrewNode.textContent) {
-              const parts = hebrewNode.textContent.trim().split(' ');
-              if (parts.length >= 3) {
-                hebrewDate = {
-                  day: parseInt(parts[0]) || 1,
-                  month: parts.slice(1, -1).join(' ') || 'ניסן',
-                  year: parseInt(parts[parts.length - 1]) || 5784,
-                  afterSunset: false
-                };
-              }
-            }
-
-            const reminderOverrideNode = eventNodes[i].getElementsByTagName('reminder_override')[0]?.textContent || undefined;
-            const reminderOverride = normalizeReminderOverride(reminderOverrideNode);
-
-            newEvents.push({
-              id: Math.random().toString(36).substr(2, 9),
-              title,
-              type: type,
-              hebrewDate,
-              reminderOverride
-            });
-          }
-          if (newEvents.length > 0) {
-            onImport?.({ events: newEvents, exportSettings: importedSettings });
-          } else {
-            alert('לא נמצאו אירועים בקובץ ה-XML.');
-          }
-        } else if (file.name.endsWith('.ics')) {
+        if (file.name.endsWith('.ics')) {
           const lines = text.split(/\r?\n/);
           const newEvents: CalendarEvent[] = [];
 
@@ -1353,9 +1278,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
           let currentEvent: Partial<CalendarEvent> | null = null;
           for (const line of lines) {
             const trimmed = line.trim();
-            if (trimmed.startsWith('X-EXPORT-SCHEMA:')) {
-              importedSettings.selectedSchema = normalizeSchema(trimmed.substring('X-EXPORT-SCHEMA:'.length));
-            } else if (trimmed.startsWith('X-EXPORT-EVENT-TYPES:')) {
+            if (trimmed.startsWith('X-EXPORT-EVENT-TYPES:')) {
               importedSettings.selectedEventTypes = trimmed.substring('X-EXPORT-EVENT-TYPES:'.length)
                 .split(',')
                 .map(t => t.trim())
@@ -1445,60 +1368,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
 
   const getEventReminderRules = (event: CalendarEvent) => buildReminderRules(getEventReminderMode(event));
 
-  const exportSettingsPayload = {
-    selected_schema: selectedSchema,
-    selected_event_types: selectedEventTypes,
-    reminder_mode: reminderMode,
-    reminders: reminderRules.map(rule => ({
-      id: rule.id,
-      label: rule.label,
-      trigger: rule.trigger,
-      time: rule.time || null
-    }))
-  };
-
   const now = new Date().toISOString();
-
-  const xmlEvents = exportEvents.map(e => {
-    const eventReminderMode = getEventReminderMode(e);
-    const eventReminderRules = getEventReminderRules(e);
-    const reminderNodes = eventReminderRules.length > 0
-      ? `\n      <reminders>\n${eventReminderRules.map(rule => `        <reminder id="${rule.id}" trigger="${rule.trigger}"${rule.time ? ` time="${rule.time}"` : ''} />`).join('\n')}\n      </reminders>`
-      : '\n      <reminders />';
-
-    return `    <event id="${e.id}" type="${e.type}">
-      <title>${e.title}</title>
-      <date>
-        <hebrew>${e.hebrewDate.day} ${e.hebrewDate.month} ${e.hebrewDate.year}</hebrew>
-      </date>
-      <reminder_override>${e.reminderOverride || 'use-export-default'}</reminder_override>
-      <effective_reminder_mode>${eventReminderMode}</effective_reminder_mode>${reminderNodes}
-    </event>`;
-  }).join('\n');
-
-  const xmlSettingsReminders = reminderRules.length > 0
-    ? `\n${reminderRules.map(rule => `      <reminder id="${rule.id}" trigger="${rule.trigger}"${rule.time ? ` time="${rule.time}"` : ''} />`).join('\n')}\n    `
-    : '\n      <none />\n    ';
-
-  const xmlPreview = `<?xml version="1.0" encoding="UTF-8"?>
-<hc4gc version="2.4">
-  <metadata>
-    <generated_at>${now}</generated_at>
-    <scope>5784</scope>
-    <location>Jerusalem</location>
-  </metadata>
-
-  <export_settings>
-    <schema>${selectedSchema}</schema>
-    <selected_event_types>${selectedEventTypes.join(', ') || 'none'}</selected_event_types>
-    <reminder_mode>${reminderMode}</reminder_mode>
-    <reminders>${xmlSettingsReminders}</reminders>
-  </export_settings>
-
-  <events>
-${xmlEvents}
-  </events>
-</hc4gc>`;
 
   const icsEvents = exportEvents.map(e => {
     const eventReminderMode = getEventReminderMode(e);
@@ -1529,31 +1399,7 @@ X-EXPORT-REMINDERS:${icsGlobalReminderIds}
 ${icsEvents}
 END:VCALENDAR`;
 
-  const jsonPreview = JSON.stringify({
-    version: "2.4",
-    metadata: {
-      generated_at: now,
-      scope: "5784",
-      location: "Jerusalem"
-    },
-    export_settings: exportSettingsPayload,
-    events: exportEvents.map(event => ({
-      ...event,
-      effectiveReminderMode: getEventReminderMode(event),
-      reminders: getEventReminderRules(event).map(rule => ({
-        id: rule.id,
-        label: rule.label,
-        trigger: rule.trigger,
-        time: rule.time || null
-      }))
-    }))
-  }, null, 2);
-
-  const previews: Record<string, string> = {
-    xml: xmlPreview,
-    ics: icsPreview,
-    json: jsonPreview
-  };
+  const previews = { ics: icsPreview };
 
   const handleDownload = () => {
     const content = previews[selectedSchema];
@@ -1643,34 +1489,6 @@ END:VCALENDAR`;
            </section>
 
           <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-right">
-            <div className="flex items-center gap-3 mb-6">
-              <Settings className="text-blue-600" size={20} />
-              <h3 className="font-bold text-lg">מבנה פלט</h3>
-             </div>
-            <div className="space-y-3">
-              {[
-                { id: 'xml', label: 'מבנה XML סטנדרטי (v2.4)', desc: 'מומלץ עבור יישומי אינטרנט וספריית סופר' },
-                { id: 'ics', label: 'iCalendar (.ics)', desc: 'מתאים ל-Google Calendar, Outlook ו-Apple' },
-                { id: 'json', label: 'נתונים גולמיים (JSON)', desc: 'זוגות מפתח-ערך לא מעובדים לניתוח נתונים' },
-              ].map((schema) => (
-                <label key={schema.id} className="relative flex items-center p-3 rounded-lg border border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors">
-                  <input 
-                    type="radio" 
-                    name="schema" 
-                    className="text-blue-600 focus:ring-blue-500 w-4 h-4 ml-4" 
-                    checked={selectedSchema === schema.id}
-                    onChange={() => onExportSettingsChange(prev => ({ ...prev, selectedSchema: schema.id as ExportSettingsState['selectedSchema'] }))} 
-                  />
-                  <div>
-                    <span className="block text-sm font-bold text-slate-900">{schema.label}</span>
-                    <span className="block text-[11px] text-slate-500">{schema.desc}</span>
-                  </div>
-                </label>
-               ))}
-             </div>
-          </section>
-
-          <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-right">
              <div className="flex items-center gap-3 mb-4">
               <ArrowLeftRight className="text-blue-600" size={20} />
               <h3 className="font-bold text-lg">ייבוא נתונים</h3>
@@ -1683,12 +1501,12 @@ END:VCALENDAR`;
                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <UploadCloud className="text-blue-600" size={24} />
               </div>
-              <p className="text-sm font-bold text-slate-900 mb-1">גרור קובץ JSON, XML או ICS לכאן</p>
+              <p className="text-sm font-bold text-slate-900 mb-1">גרור קובץ ICS לכאן</p>
                <p className="text-[10px] text-slate-500 mb-4">או לחץ לבחירת קובץ מהמחשב</p>
               <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors pointer-events-none">
                  בחר קובץ
                </button>
-               <input type="file" ref={fileInputRef} className="hidden" accept=".xml,.json,.ics" onChange={handleFileSelect} />
+               <input type="file" ref={fileInputRef} className="hidden" accept=".ics" onChange={handleFileSelect} />
             </div>
            </section>
 
