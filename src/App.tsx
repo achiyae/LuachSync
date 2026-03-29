@@ -1423,7 +1423,36 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
     }
   };
 
-  const icsEvents = exportEvents.flatMap(e => {
+  const icsConfigEvents = exportEvents.map(e => {
+    const eventReminderMode = getEventReminderMode(e);
+    const eventReminderRules = getEventReminderRules(e);
+    const eventDate = resolveEventGregorianDate(e);
+    const dtStart = formatIcsDate(eventDate);
+    const dtEnd = formatIcsDate(addDays(eventDate, 1));
+    const dtStamp = formatIcsUtcDateTime(new Date());
+    const escapedSummary = escapeIcsText(e.title);
+    const escapedCategory = escapeIcsText(e.type);
+    const icsReminders = eventReminderRules
+      .map(rule => `BEGIN:VALARM\nACTION:DISPLAY\nDESCRIPTION:${escapedSummary}\nTRIGGER:${rule.trigger}${rule.time ? `\nX-REMINDER-TIME:${rule.time}` : ''}\nEND:VALARM`)
+      .join('\n');
+    const reminderSection = icsReminders ? `${icsReminders}\n` : '';
+
+    return `BEGIN:VEVENT
+UID:${e.id}@hc4gc-source
+DTSTAMP:${dtStamp}
+DTSTART;VALUE=DATE:${dtStart}
+DTEND;VALUE=DATE:${dtEnd}
+SUMMARY:${escapedSummary}
+CATEGORIES:${escapedCategory}
+X-HC4GC-ENTRY-TYPE:SOURCE
+X-HEBREW-DATE:${e.hebrewDate.day} ${e.hebrewDate.month} ${e.hebrewDate.year}
+X-AFTER-SUNSET:${e.hebrewDate.afterSunset ? 'true' : 'false'}
+X-REMINDER-OVERRIDE:${e.reminderOverride || 'use-export-default'}
+X-EFFECTIVE-REMINDER-MODE:${eventReminderMode}
+${reminderSection}END:VEVENT`;
+  }).join('\n');
+
+  const icsGeneratedEvents = exportEvents.flatMap(e => {
     const eventReminderRules = getEventReminderRules(e);
     const eventTypeLabel = getEventTypeSyncLabel(e.type);
     const month = hebrewToEnglishMonth[e.hebrewDate.month] || 'Nisan';
@@ -1455,6 +1484,7 @@ DTSTART;VALUE=DATE:${dtStart}
 DTEND;VALUE=DATE:${dtEnd}
 SUMMARY:${escapedSummary}
 CATEGORIES:${escapedCategory}
+      X-HC4GC-ENTRY-TYPE:GENERATED
 ${reminderSection}END:VEVENT`);
       } catch {
         // Skip invalid dates in years where the Hebrew date does not exist.
@@ -1474,7 +1504,8 @@ X-EXPORT-SCHEMA:${selectedSchema.toUpperCase()}
 X-EXPORT-EVENT-TYPES:${selectedEventTypes.join(',') || 'none'}
 X-EXPORT-REMINDER-MODE:${reminderMode}
 X-EXPORT-REMINDERS:${icsGlobalReminderIds}
-${icsEvents}
+${icsConfigEvents}
+${icsGeneratedEvents}
 END:VCALENDAR`;
 
   const previews = { ics: icsPreview };
