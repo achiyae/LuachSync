@@ -448,6 +448,14 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
             ) : (
               upcomingEvents.map((event) => {
                 const isToday = event.nextOccur.abs() === hDate.abs();
+                const hasReminderOverride = event.reminderOverride && event.reminderOverride !== 'use-export-default';
+                const overrideLabel = event.reminderOverride === 'day-before'
+                  ? 'יום לפני בשעה 19:00'
+                  : event.reminderOverride === 'week-before'
+                    ? 'שבוע לפני'
+                    : event.reminderOverride === 'both'
+                      ? 'גם שבוע לפני וגם יום לפני ב-19:00'
+                      : 'ללא תזכורות';
                 const monthName = event.nextOccur.getMonthName();
                 const monthLabel = hebrewMonthsRev[monthName] || event.nextOccur.getMonthName('h') || monthName;
                 return (
@@ -463,13 +471,24 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
                   </div>
                   <div className="flex-1 text-right">
                     <div className="flex justify-between items-center mb-1">
-                      <span className={cn(
-                        "px-2 py-0.5 text-[10px] font-bold uppercase rounded tracking-wider",
-                        event.type === 'yahrzeit' ? "bg-purple-200 text-purple-900" : 
-                        event.type === 'birthday' ? "bg-orange-200 text-orange-900" : "bg-blue-200 text-blue-900"
-                      )}>
-                        {event.type === 'yahrzeit' ? 'אזכרה' : event.type === 'birthday' ? 'יום הולדת' : event.type === 'anniversary' ? 'יום נישואין' : event.type}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          "px-2 py-0.5 text-[10px] font-bold uppercase rounded tracking-wider",
+                          event.type === 'yahrzeit' ? "bg-purple-200 text-purple-900" : 
+                          event.type === 'birthday' ? "bg-orange-200 text-orange-900" : "bg-blue-200 text-blue-900"
+                        )}>
+                          {event.type === 'yahrzeit' ? 'אזכרה' : event.type === 'birthday' ? 'יום הולדת' : event.type === 'anniversary' ? 'יום נישואין' : event.type}
+                        </span>
+                        {hasReminderOverride && (
+                          <span
+                            className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-700"
+                            title={`עקיפת תזכורות: ${overrideLabel}`}
+                            aria-label={`עקיפת תזכורות: ${overrideLabel}`}
+                          >
+                            <Bell size={13} />
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs text-slate-500 font-medium">{gematriya(event.nextOccur.getDate())} {monthLabel} {gematriya(event.nextOccur.getFullYear() % 1000)}</span>
                     </div>
                     <h4 className="text-lg font-bold text-slate-900">{event.title}</h4>
