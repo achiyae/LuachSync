@@ -132,13 +132,74 @@ const TopBar = ({ title }: { title: string }) => {
 // --- Views ---
 
 const DashboardView = ({ events, onAddClick }: { events: CalendarEvent[], onAddClick: () => void }) => {
-  const today = new Date();
-  const hDate = new HDate(today);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const hDate = new HDate(selectedDate);
   
+  const [filterType, setFilterType] = useState<string | null>(null);
+  const uniqueTypes = useMemo(() => Array.from(new Set(events.map(e => e.type))), [events]);
+  const filteredEvents = useMemo(() => filterType ? events.filter(e => e.type === filterType) : events, [events, filterType]);
+
+  const upcomingEvents = useMemo(() => {
+    const fromYear = hDate.getFullYear();
+    const fromAbs = hDate.abs();
+
+    const mapped = filteredEvents.map(event => {
+      // @ts-ignore
+      let nextOccur = new HDate(event.hebrewDate.day, event.hebrewDate.month, fromYear);
+      let abs = nextOccur.abs();
+      if (abs < fromAbs) {
+        // @ts-ignore
+        nextOccur = new HDate(event.hebrewDate.day, event.hebrewDate.month, fromYear + 1);
+        abs = nextOccur.abs();
+      }
+      return { ...event, nextOccur };
+    });
+    
+    mapped.sort((a, b) => a.nextOccur.abs() - b.nextOccur.abs());
+    return mapped;
+  }, [filteredEvents, hDate]);
+
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const calendarDays = useMemo(() => eachDayOfInterval({ start: startOfMonth(calendarMonth), end: endOfMonth(calendarMonth) }), [calendarMonth]);
+  const monthHDate = new HDate(calendarMonth);
+
+  const [locationState, setLocationState] = useState<{ lat: number, long: number, tz: string, name: string }>({ lat: 31.7683, long: 35.2137, tz: 'Asia/Jerusalem', name: 'Jerusalem' });
+  const [isEditingLoc, setIsEditingLoc] = useState(false);
+  const [locationQuery, setLocationQuery] = useState('');
+
+  const handleLocationSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // @ts-ignore (hebcal core might not have exact types listed locally, but we rely on execution outputs)
+    const loc: any = Location.lookup(locationQuery);
+    if (loc && loc.latitude) {
+        setLocationState({ lat: loc.latitude, long: loc.longitude, tz: loc.timeZoneId || 'Asia/Jerusalem', name: loc.locationName });
+    } else {
+        alert('מיקום לא נמצא במאגר (נסה באנגלית, כגון "Tel Aviv").');
+    }
+    setIsEditingLoc(false);
+  };
+
+  const getLocation = () => {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&accept-language=he`);
+                const data = await res.json();
+                const city = data.address?.city || data.address?.town || data.address?.village || 'מיקום מותאם אישית';
+                setLocationState({ lat: pos.coords.latitude, long: pos.coords.longitude, tz: Intl.DateTimeFormat().resolvedOptions().timeZone, name: city });
+            } catch {
+                setLocationState({ lat: pos.coords.latitude, long: pos.coords.longitude, tz: Intl.DateTimeFormat().resolvedOptions().timeZone, name: 'מיקום מותאם אישית' });
+            }
+        });
+    } else {
+        alert("שירותי מיקום לא נתמכים בדפדפן זה");
+    }
+  };
+
   const zmanim = useMemo(() => {
-    const loc = new Location(31.7683, 35.2137, true, 'Asia/Jerusalem'); // Jerusalem
-    const z = new Zmanim(loc, today, false);
-    const formatTime = (d: Date | null) => d ? format(d, 'hh:mm a') : '--:--';
+    const loc = new Location(locationState.lat, locationState.long, true, locationState.tz, locationState.name, 'IL');
+    const z = new Zmanim(loc, selectedDate, false);
+    const formatTime = (d: Date | null) => d ? format(d, 'HH:mm') : '--:--';
     return {
       alotHaShachar: formatTime(z.alotHaShachar()),
       netzHaChama: formatTime(z.neitzHaChama()),
@@ -146,7 +207,7 @@ const DashboardView = ({ events, onAddClick }: { events: CalendarEvent[], onAddC
       chatzos: formatTime(z.chatzot()),
       shkiya: formatTime(z.shkiah()),
     };
-  }, [today]);
+  }, [selectedDate, locationState]);
 
   return (
     <div className="p-8 space-y-8">
@@ -155,7 +216,7 @@ const DashboardView = ({ events, onAddClick }: { events: CalendarEvent[], onAddC
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500 mb-1 font-semibold">השקפה יומית</p>
           <h2 className="text-4xl font-bold text-slate-900">{hDate.renderGematriya()}</h2>
           <p className="text-slate-500 font-medium">
-            {format(today, 'EEEE, d MMMM yyyy')} • פרשת {getSedra(hDate.getFullYear(), false).lookup(hDate)?.parsha?.join('-') || 'אין פרשה'}
+            {format(selectedDate, 'EEEE, d MMMM yyyy')} • פרשת {getSedra(hDate.getFullYear(), false).lookup(hDate)?.parsha?.join('-') || 'אין פרשה'}
           </p>
         </div>
         <div className="flex gap-3">
@@ -173,30 +234,41 @@ const DashboardView = ({ events, onAddClick }: { events: CalendarEvent[], onAddC
       </div>
 
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-        <button className="px-4 py-1.5 bg-blue-100 text-blue-800 rounded-full text-xs font-bold whitespace-nowrap">כל האירועים</button>
-        <button className="px-4 py-1.5 bg-slate-200 text-slate-700 rounded-full text-xs font-semibold whitespace-nowrap hover:bg-slate-300 transition-colors">ימי הולדת</button>
-        <button className="px-4 py-1.5 bg-slate-200 text-slate-700 rounded-full text-xs font-semibold whitespace-nowrap hover:bg-slate-300 transition-colors">ימי נישואין</button>
-        <button className="px-4 py-1.5 bg-slate-200 text-slate-700 rounded-full text-xs font-semibold whitespace-nowrap hover:bg-slate-300 transition-colors">אזכרות</button>
+        <button 
+          onClick={() => setFilterType(null)}
+          className={cn("px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors", filterType === null ? "bg-blue-100 text-blue-800" : "bg-slate-200 text-slate-700 hover:bg-slate-300")}
+        >כל האירועים</button>
+        {uniqueTypes.map(t => (
+          <button 
+            key={t}
+            onClick={() => setFilterType(t)}
+            className={cn("px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors", filterType === t ? "bg-blue-100 text-blue-800" : "bg-slate-200 text-slate-700 hover:bg-slate-300")}
+          >
+            {t === 'yahrzeit' ? 'אזכרות' : t === 'birthday' ? 'ימי הולדת' : t === 'anniversary' ? 'ימי נישואין' : t}
+          </button>
+        ))}
       </div>
 
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-12 lg:col-span-8 space-y-6">
           <h3 className="text-xs uppercase tracking-[0.15em] text-slate-500 font-bold">אזכרות ושמחות קרובות</h3>
           <div className="space-y-4">
-            {events.length === 0 ? (
+            {upcomingEvents.length === 0 ? (
               <div className="p-12 text-center bg-white rounded-xl border border-dashed border-slate-300 text-slate-400">
-                אין אירועים קרובים. לחץ על "אירוע חדש" כדי להתחיל.
+                אין אירועים קרובים תחת המסנן הזה.
               </div>
             ) : (
-              events.map((event) => (
-                <div key={event.id} className="group bg-white p-6 rounded-xl transition-all hover:bg-slate-50 flex items-start gap-6 border border-transparent hover:border-slate-200 shadow-sm">
+              upcomingEvents.map((event) => {
+                const isToday = event.nextOccur.abs() === hDate.abs();
+                return (
+                <div key={event.id} className={cn("group p-6 rounded-xl transition-all flex items-start gap-6 border shadow-sm", isToday ? "bg-blue-50 border-blue-200" : "bg-white border-transparent hover:bg-slate-50 hover:border-slate-200")}>
                   <div className={cn(
                     "flex flex-col items-center justify-center w-16 h-16 rounded-lg shrink-0",
                     event.type === 'yahrzeit' ? "bg-purple-100 text-purple-800" : 
                     event.type === 'birthday' ? "bg-orange-100 text-orange-800" : "bg-blue-100 text-blue-800"
                   )}>
-                    <span className="text-xs font-bold leading-none">מאי</span>
-                    <span className="text-2xl font-extrabold">24</span>
+                    <span className="text-[10px] font-bold leading-none">{event.type === 'yahrzeit' ? 'אזכרה' : event.type === 'birthday' ? 'יום הולדת' : event.type === 'anniversary' ? 'יום נישואין' : event.type}</span>
+                    <span className="text-2xl font-extrabold mt-1 leading-none">{gematriya(event.nextOccur.getDate()) || event.hebrewDate.day}</span>
                   </div>
                   <div className="flex-1 text-right">
                     <div className="flex justify-between items-center mb-1">
@@ -205,9 +277,9 @@ const DashboardView = ({ events, onAddClick }: { events: CalendarEvent[], onAddC
                         event.type === 'yahrzeit' ? "bg-purple-200 text-purple-900" : 
                         event.type === 'birthday' ? "bg-orange-200 text-orange-900" : "bg-blue-200 text-blue-900"
                       )}>
-                        {event.type === 'yahrzeit' ? 'אזכרה' : event.type === 'birthday' ? 'יום הולדת' : 'יום נישואין'}
+                        {event.type === 'yahrzeit' ? 'אזכרה' : event.type === 'birthday' ? 'יום הולדת' : event.type === 'anniversary' ? 'יום נישואין' : event.type}
                       </span>
-                      <span className="text-xs text-slate-500 font-medium">{event.hebrewDate.day} {event.hebrewDate.month}</span>
+                      <span className="text-xs text-slate-500 font-medium">{gematriya(event.nextOccur.getDate())} {event.nextOccur.getMonthName('h')} {gematriya(event.nextOccur.getFullYear() % 1000)}</span>
                     </div>
                     <h4 className="text-lg font-bold text-slate-900">{event.title}</h4>
                   </div>
@@ -217,7 +289,8 @@ const DashboardView = ({ events, onAddClick }: { events: CalendarEvent[], onAddC
                     </button>
                   </div>
                 </div>
-              ))
+              );
+            })
             )}
           </div>
         </div>
@@ -225,29 +298,74 @@ const DashboardView = ({ events, onAddClick }: { events: CalendarEvent[], onAddC
         <div className="col-span-12 lg:col-span-4 space-y-6">
           <div className="bg-blue-50 p-6 rounded-xl space-y-4 border border-blue-100">
             <div className="flex justify-between items-center">
-              <h4 className="font-bold text-blue-900">מאי 2024 / אייר תשפ״ד</h4>
               <div className="flex gap-2">
-                <ChevronRight className="text-slate-400 cursor-pointer" size={18} />
-                <ChevronLeft className="text-slate-400 cursor-pointer" size={18} />
+                <ChevronRight onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))} className="text-slate-400 cursor-pointer hover:text-blue-600 transition-colors" size={18} />
+                <ChevronLeft onClick={() => setCalendarMonth(subMonths(calendarMonth, 1))} className="text-slate-400 cursor-pointer hover:text-blue-600 transition-colors" size={18} />
               </div>
+              <h4 className="font-bold text-blue-900" dir="ltr">{format(calendarMonth, 'MMMM yyyy')} / {monthHDate.renderGematriya(true)}</h4>
             </div>
-            <div className="grid grid-cols-7 gap-2 text-center">
+            <div className="grid grid-cols-7 gap-2 text-center" dir="rtl">
               {['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'].map(day => (
                 <span key={day} className="text-[10px] font-bold text-slate-400">{day}</span>
               ))}
-              {Array.from({ length: 31 }).map((_, i) => (
-                <span key={i} className={cn(
-                  "text-xs py-1 rounded-full cursor-pointer hover:bg-blue-200 transition-colors",
-                  i + 1 === 14 ? "bg-blue-600 text-white font-bold" : "text-slate-700"
-                )}>
-                  {i + 1}
-                </span>
+              {Array.from({ length: startOfMonth(calendarMonth).getDay() }).map((_, i) => (
+                <span key={`empty-${i}`}></span>
               ))}
+              {calendarDays.map((date, i) => {
+                const isSelected = isSameDay(date, selectedDate);
+                const isToday = isSameDay(date, new Date());
+                const dayHDate = new HDate(date);
+                const hasEvent = events.some(e => {
+                  try {
+                    const temp = new HDate(e.hebrewDate.day, e.hebrewDate.month as any, dayHDate.getFullYear());
+                    return temp.getMonth() === dayHDate.getMonth() && temp.getDate() === dayHDate.getDate();
+                  } catch {
+                    return false;
+                  }
+                });
+                
+                return (
+                  <button 
+                    key={i} 
+                    onClick={() => setSelectedDate(date)}
+                    className={cn(
+                      "text-xs py-1 rounded-full cursor-pointer hover:bg-blue-200 transition-colors relative flex flex-col items-center justify-center h-8 w-8 mx-auto",
+                      isSelected ? "bg-blue-600 text-white font-bold shadow-sm" : isToday ? "text-blue-600 font-bold" : "text-slate-700"
+                    )}
+                  >
+                    <span className="leading-none">{format(date, 'd')}</span>
+                    {hasEvent && (
+                      <span className={cn("absolute bottom-1 w-1 h-1 rounded-full", isSelected ? "bg-white" : "bg-blue-600")} />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <h4 className="text-xs uppercase tracking-[0.15em] text-slate-500 font-bold mb-4">זמני היום (ירושלים)</h4>
+            {isEditingLoc ? (
+              <form onSubmit={handleLocationSubmit} className="flex gap-2 mb-4">
+                <input 
+                  type="text" 
+                  value={locationQuery}
+                  onChange={(e) => setLocationQuery(e.target.value)}
+                  placeholder="למשל: Tel Aviv" 
+                  className="flex-1 text-xs border border-slate-200 rounded px-2 py-1 bg-slate-50 text-slate-700"
+                  autoFocus
+                />
+                <button type="submit" className="text-[10px] bg-blue-600 text-white px-2 rounded hover:bg-blue-700 font-bold">אישור</button>
+                <button type="button" onClick={() => setIsEditingLoc(false)} className="text-[10px] bg-slate-200 text-slate-700 px-2 rounded hover:bg-slate-300 font-bold">בטל</button>
+              </form>
+            ) : (
+              <div className="flex justify-between items-start mb-4 gap-2">
+                <h4 className="text-[11px] uppercase tracking-[0.1em] text-slate-500 font-bold truncate leading-relaxed" title={locationState.name}>
+                  זמני היום <br/>
+                  <button onClick={() => setIsEditingLoc(true)} className="text-blue-600 hover:underline">{locationState.name}</button>
+                </h4>
+                <button onClick={getLocation} type="button" className="text-[10px] text-blue-600 font-bold hover:underline shrink-0 bg-blue-50 px-2 py-1 rounded">איתור מיקום שלי</button>
+              </div>
+            )}
             <div className="space-y-3">
               {[
                 { label: 'עלות השחר', value: zmanim.alotHaShachar },
@@ -258,21 +376,10 @@ const DashboardView = ({ events, onAddClick }: { events: CalendarEvent[], onAddC
               ].map((item, idx) => (
                 <div key={idx} className="flex justify-between items-center py-2 border-b border-slate-50 last:border-0">
                   <span className="text-sm font-medium text-slate-700">{item.label}</span>
-                  <span className="text-sm font-bold text-blue-600">{item.value}</span>
+                  <span className="text-sm font-bold text-blue-600" dir="ltr">{item.value}</span>
                 </div>
               ))}
             </div>
-          </div>
-
-          <div className="relative overflow-hidden rounded-xl bg-blue-600 p-6 text-white">
-            <div className="relative z-10">
-              <h4 className="font-extrabold text-xl leading-tight">התראת <br/>יזכור</h4>
-              <p className="text-xs text-blue-100 mt-2">קבלו תזכורות אוטומטיות להדלקת נר נשמה.</p>
-              <button className="mt-4 px-3 py-1.5 bg-white text-blue-700 text-[11px] font-bold rounded uppercase tracking-wider hover:bg-blue-50 transition-colors">
-                הפעל עכשיו
-              </button>
-            </div>
-            <Sparkles className="absolute -left-4 -bottom-4 text-[120px] opacity-10 rotate-12" />
           </div>
         </div>
       </div>
