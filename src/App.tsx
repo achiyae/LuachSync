@@ -210,7 +210,6 @@ const DashboardView = ({ events, onAddClick }: { events: CalendarEvent[], onAddC
                       <span className="text-xs text-slate-500 font-medium">{event.hebrewDate.day} {event.hebrewDate.month}</span>
                     </div>
                     <h4 className="text-lg font-bold text-slate-900">{event.title}</h4>
-                    <p className="text-sm text-slate-500 mt-1 leading-relaxed">{event.description}</p>
                   </div>
                   <div className="shrink-0">
                     <button className="p-2 text-slate-300 hover:text-blue-600 transition-colors">
@@ -286,11 +285,12 @@ const AddEventView = ({ events, onSave, onCancel }: { events: CalendarEvent[], o
     title: '',
     type: 'birthday' as EventType,
     customType: '',
+    dateMode: 'hebrew' as 'hebrew' | 'gregorian',
     day: 1,
     month: 'ניסן',
     yearStr: gematriya(5786) || 'תשפ״ו',
-    afterSunset: false,
-    description: ''
+    gregorianDate: format(new Date(), 'yyyy-MM-dd'),
+    afterSunset: false
   });
 
   const months = [
@@ -300,16 +300,66 @@ const AddEventView = ({ events, onSave, onCancel }: { events: CalendarEvent[], o
   const uniqueCustomTypes = useMemo(() => {
     return Array.from(new Set(events.map(e => e.type).filter(t => !['birthday', 'anniversary', 'yahrzeit'].includes(t))));
   }, [events]);
+  
+  const hebrewMonthsRev: Record<string, string> = {
+      'Nisan': 'ניסן', 'Iyyar': 'אייר', 'Sivan': 'סיוון', 'Tamuz': 'תמוז', 'Av': 'אב', 'Elul': 'אלול',
+      'Tishrei': 'תשרי', 'Cheshvan': 'חשוון', 'Kislev': 'כסלו', 'Tevet': 'טבת', 'Shvat': 'שבט', 'Adar 1': 'אדר', 'Adar 2': 'אדר ב׳', 'Adar': 'אדר'
+  };
+
+  const previewDate = useMemo(() => {
+    if (formData.dateMode === 'hebrew') {
+        try {
+            const cleanYearStr = formData.yearStr.replace(/^ה['״"]?(?=[א-ת])/g, '');
+            let y = gematriyaStrToNum(cleanYearStr);
+            if (y < 3000) y += 5000;
+            const monthMap: Record<string, string> = {
+                'ניסן': 'Nisan', 'אייר': 'Iyyar', 'סיוון': 'Sivan', 'תמוז': 'Tamuz', 'אב': 'Av', 'אלול': 'Elul',
+                'תשרי': 'Tishrei', 'חשוון': 'Cheshvan', 'כסלו': 'Kislev', 'טבת': 'Tevet', 'שבט': 'Shvat', 'אדר': 'Adar 1', 'אדר ב׳': 'Adar 2'
+            };
+            const hd = new HDate(formData.day, monthMap[formData.month] || 'Nisan', y);
+            const targetHd = formData.afterSunset ? hd.prev() : hd;
+            const gregDate = targetHd.greg();
+            return {
+                title: 'תאריך לועזי מחושב',
+                value: format(gregDate, 'd MMMM yyyy'),
+                sedra: getSedra(y, true).lookup(hd)?.parsha?.join('-') || 'אין פרשה',
+                hd: hd,
+                previewDayStr: gematriya(formData.day),
+                previewMonthStr: formData.month
+            };
+        } catch {
+            return { title: 'תאריך לועזי מחושב', value: 'תאריך לא חוקי', sedra: '', hd: null, previewDayStr: '', previewMonthStr: '' };
+        }
+    } else {
+        try {
+            const [y, m, d] = formData.gregorianDate.split('-').map(Number);
+            let hd = new HDate(new Date(y, m - 1, d));
+            if (formData.afterSunset) hd = hd.next();
+            
+            return {
+                title: 'תאריך עברי מחושב',
+                value: `${gematriya(hd.getDate())} ב${hebrewMonthsRev[hd.getMonthName()] || hd.getMonthName()} ${gematriya(hd.getFullYear())}`,
+                sedra: getSedra(hd.getFullYear(), true).lookup(hd)?.parsha?.join('-') || 'אין פרשה',
+                hd: hd,
+                previewDayStr: gematriya(hd.getDate()),
+                previewMonthStr: hebrewMonthsRev[hd.getMonthName()] || hd.getMonthName()
+            };
+        } catch {
+            return { title: 'תאריך עברי מחושב', value: 'תאריך לא חוקי', sedra: '', hd: null, previewDayStr: '', previewMonthStr: '' };
+        }
+    }
+  }, [formData.dateMode, formData.day, formData.month, formData.yearStr, formData.afterSunset, formData.gregorianDate]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     let y = 5786;
-    try {
-        const cleanYearStr = formData.yearStr.replace(/^ה['״"]?(?=[א-ת])/g, '');
-        y = gematriyaStrToNum(cleanYearStr);
-        if (y < 3000) y += 5000;
-    } catch {
-        // fallback
+    let d = 1;
+    let m = 'Nisan';
+    
+    if (previewDate.hd) {
+        y = previewDate.hd.getFullYear();
+        d = previewDate.hd.getDate();
+        m = previewDate.hd.getMonthName();
     }
     
     onSave({
@@ -317,35 +367,13 @@ const AddEventView = ({ events, onSave, onCancel }: { events: CalendarEvent[], o
       title: formData.title,
       type: formData.type === 'other' ? formData.customType : formData.type,
       hebrewDate: {
-        day: formData.day,
-        month: formData.month,
+        day: d,
+        month: hebrewMonthsRev[m] || 'ניסן',
         year: y,
         afterSunset: formData.afterSunset
-      },
-      description: formData.description
+      }
     });
   };
-
-  const previewDate = useMemo(() => {
-    try {
-        const cleanYearStr = formData.yearStr.replace(/^ה['״"]?(?=[א-ת])/g, '');
-        let y = gematriyaStrToNum(cleanYearStr);
-        if (y < 3000) y += 5000;
-        const monthMap: Record<string, string> = {
-            'ניסן': 'Nisan', 'אייר': 'Iyyar', 'סיוון': 'Sivan', 'תמוז': 'Tamuz', 'אב': 'Av', 'אלול': 'Elul',
-            'תשרי': 'Tishrei', 'חשוון': 'Cheshvan', 'כסלו': 'Kislev', 'טבת': 'Tevet', 'שבט': 'Shvat', 'אדר': 'Adar 1', 'אדר ב׳': 'Adar 2'
-        };
-        const hd = new HDate(formData.day, monthMap[formData.month] || 'Nisan', y);
-        const targetHd = formData.afterSunset ? hd.prev() : hd;
-        const gregDate = targetHd.greg();
-        return {
-            gregStr: format(gregDate, 'd MMMM yyyy'),
-            sedra: getSedra(y, true).lookup(hd)?.parsha?.join('-') || 'אין פרשה'
-        };
-    } catch {
-        return { gregStr: 'תאריך לא חוקי', sedra: '' };
-    }
-  }, [formData.day, formData.month, formData.yearStr, formData.afterSunset]);
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -422,69 +450,109 @@ const AddEventView = ({ events, onSave, onCancel }: { events: CalendarEvent[], o
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold flex items-center gap-2">
               <span className="w-1.5 h-6 bg-slate-400 rounded-full"></span>
-              בחירת תאריך עברי
+              בחירת תאריך
             </h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">חודש עברי</label>
-              <select 
-                className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
-                value={formData.month}
-                onChange={(e) => setFormData({ ...formData, month: e.target.value })}
-                required
-              >
-                {months.map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">יום</label>
-              <select 
-                className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
-                value={formData.day}
-                onChange={(e) => setFormData({ ...formData, day: parseInt(e.target.value) })}
-                required
-              >
-                {Array.from({ length: 30 }).map((_, i) => (
-                  <option key={i+1} value={i+1}>{gematriya(i+1)}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">שנה עברית</label>
-              <input 
-                className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm text-right"
-                placeholder="תשפ״ו"
-                value={formData.yearStr}
-                onChange={(e) => setFormData({ ...formData, yearStr: e.target.value })}
-                type="text"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">זמן</label>
-               <select 
-                className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
-                value={formData.afterSunset ? "after" : "before"}
-                onChange={(e) => setFormData({ ...formData, afterSunset: e.target.value === "after" })}
-                required
-              >
-                <option value="before">לפני השקיעה</option>
-                <option value="after">אחרי השקיעה</option>
-              </select>
+            <div className="flex bg-slate-100 rounded-lg p-1 text-[10px] font-bold">
+              <button 
+                type="button" 
+                onClick={() => setFormData({ ...formData, dateMode: 'hebrew' })}
+                className={cn("px-3 py-1 rounded transition-all uppercase tracking-tighter", formData.dateMode === 'hebrew' ? "bg-white shadow-sm text-blue-600" : "text-slate-400")}
+              >תאריך עברי</button>
+              <button 
+                type="button" 
+                onClick={() => setFormData({ ...formData, dateMode: 'gregorian' })}
+                className={cn("px-3 py-1 rounded transition-all uppercase tracking-tighter", formData.dateMode === 'gregorian' ? "bg-white shadow-sm text-blue-600" : "text-slate-400")}
+              >תאריך לועזי</button>
             </div>
           </div>
+          
+          {formData.dateMode === 'hebrew' ? (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">חודש עברי</label>
+                <select 
+                  className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
+                  value={formData.month}
+                  onChange={(e) => setFormData({ ...formData, month: e.target.value })}
+                  required
+                >
+                  {months.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">יום</label>
+                <select 
+                  className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
+                  value={formData.day}
+                  onChange={(e) => setFormData({ ...formData, day: parseInt(e.target.value) })}
+                  required
+                >
+                  {Array.from({ length: 30 }).map((_, i) => (
+                    <option key={i+1} value={i+1}>{gematriya(i+1)}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">שנה עברית</label>
+                <input 
+                  className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm text-right"
+                  placeholder="תשפ״ו"
+                  value={formData.yearStr}
+                  onChange={(e) => setFormData({ ...formData, yearStr: e.target.value })}
+                  type="text"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">זמן</label>
+                 <select 
+                  className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
+                  value={formData.afterSunset ? "after" : "before"}
+                  onChange={(e) => setFormData({ ...formData, afterSunset: e.target.value === "after" })}
+                  required
+                >
+                  <option value="before">לפני השקיעה</option>
+                  <option value="after">אחרי השקיעה</option>
+                </select>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">תאריך לועזי</label>
+                <input 
+                  type="date"
+                  className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm text-right"
+                  value={formData.gregorianDate}
+                  onChange={(e) => setFormData({ ...formData, gregorianDate: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">זמן רלוונטי</label>
+                 <select 
+                  className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
+                  value={formData.afterSunset ? "after" : "before"}
+                  onChange={(e) => setFormData({ ...formData, afterSunset: e.target.value === "after" })}
+                  required
+                >
+                  <option value="before">לפני השקיעה</option>
+                  <option value="after">אחרי השקיעה (הופך ליום העברי הבא)</option>
+                </select>
+              </div>
+            </div>
+          )}
         </section>
 
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex-1 bg-slate-50 p-6 rounded-xl border border-slate-200 flex items-center gap-6">
             <div className="w-16 h-16 bg-white rounded-xl shadow-sm flex flex-col items-center justify-center border border-slate-200">
-              <span className="text-[10px] font-bold text-slate-400 leading-none">{formData.month}</span>
-              <span className="text-2xl font-extrabold text-blue-900">{gematriya(formData.day)}</span>
+              <span className="text-[10px] font-bold text-slate-400 leading-none">{previewDate.previewMonthStr}</span>
+              <span className="text-2xl font-extrabold text-blue-900">{previewDate.previewDayStr}</span>
             </div>
             <div>
               <h4 className="font-bold text-slate-900">סיכום תצוגה מקדימה</h4>
-              <p className="text-xs text-slate-500">תאריך גרגוריאני מחושב: {previewDate.gregStr}</p>
+              <p className="text-xs text-slate-500">{previewDate.title}: {previewDate.value}</p>
               {previewDate.sedra && <p className="text-xs text-slate-500 italic">פרשת {previewDate.sedra}</p>}
             </div>
           </div>
@@ -636,13 +704,11 @@ const ImportExportView = ({ events, onImport }: { events: CalendarEvent[], onImp
           const newEvents: CalendarEvent[] = [];
           for (let i = 0; i < eventNodes.length; i++) {
             const title = eventNodes[i].getElementsByTagName("title")[0]?.textContent || "אירוע מיובא (XML)";
-            const desc = eventNodes[i].getElementsByTagName("description")[0]?.textContent || "";
             const type = (eventNodes[i].getAttribute("type") as EventType) || "birthday";
             newEvents.push({
               id: Math.random().toString(36).substr(2, 9),
               title,
               type: type,
-              description: desc,
               hebrewDate: { day: 1, month: 'ניסן', year: 5784 }
             });
           }
@@ -664,7 +730,6 @@ const ImportExportView = ({ events, onImport }: { events: CalendarEvent[], onImp
               currentEvent = null;
             }
             else if (currentEvent && trimmed.startsWith('SUMMARY:')) currentEvent.title = trimmed.substring(8);
-            else if (currentEvent && trimmed.startsWith('DESCRIPTION:')) currentEvent.description = trimmed.substring(12);
             else if (currentEvent && trimmed.startsWith('CATEGORIES:')) currentEvent.type = trimmed.substring(11);
           }
           
@@ -703,7 +768,6 @@ const ImportExportView = ({ events, onImport }: { events: CalendarEvent[], onImp
       <date>
         <hebrew>${e.hebrewDate.day} ${e.hebrewDate.month} ${e.hebrewDate.year}</hebrew>
       </date>
-      <description>${e.description}</description>
     </event>`).join('\n');
 
   const xmlPreview = `<?xml version="1.0" encoding="UTF-8"?>
@@ -722,7 +786,6 @@ ${xmlEvents}
   const icsEvents = events.map(e => `BEGIN:VEVENT
 UID:${e.id}
 SUMMARY:${e.title}
-DESCRIPTION:${e.description}
 CATEGORIES:${e.type}
 END:VEVENT`).join('\n');
 
