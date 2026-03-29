@@ -1381,6 +1381,7 @@ UID:${e.id}
 SUMMARY:${e.title}
 CATEGORIES:${e.type}
 X-HEBREW-DATE:${e.hebrewDate.day} ${e.hebrewDate.month} ${e.hebrewDate.year}
+X-AFTER-SUNSET:${e.hebrewDate.afterSunset ? 'true' : 'false'}
 X-REMINDER-OVERRIDE:${e.reminderOverride || 'use-export-default'}
 X-EFFECTIVE-REMINDER-MODE:${eventReminderMode}
 ${reminderSection}END:VEVENT`;
