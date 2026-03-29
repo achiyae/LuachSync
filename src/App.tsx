@@ -36,7 +36,7 @@ import { HDate, Zmanim, Location, HebrewCalendar, getSedra, gematriya, gematriya
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addDays, getDay } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { cn } from './lib/utils';
-import { CalendarEvent, EventType } from './types';
+import { CalendarEvent, EventType, ReminderMode } from './types';
 
 // --- Helpers ---
 const hebrewMonthsMap: Record<string, string> = {
@@ -49,6 +49,32 @@ const hebrewMonthsRev: Record<string, string> = {
   'Nisan': 'ניסן', 'Iyyar': 'אייר', 'Sivan': 'סיוון', 'Tamuz': 'תמוז', 'Av': 'אב', 'Elul': 'אלול',
   'Tishrei': 'תשרי', 'Cheshvan': 'חשוון', 'Heshvan': 'חשוון', 'Kislev': 'כסלו', 'Tevet': 'טבת',
   'Shvat': 'שבט', "Sh'vat": 'שבט', 'Adar 1': 'אדר א׳', 'Adar I': 'אדר א׳', 'Adar 2': 'אדר ב׳', 'Adar II': 'אדר ב׳', 'Adar': 'אדר'
+};
+
+type ReminderRule = { id: string; label: string; trigger: string; time?: string };
+
+const REMINDER_MODE_OPTIONS: Array<{ id: ReminderMode; label: string; desc: string }> = [
+  { id: 'use-export-default', label: 'השתמש בהגדרת הייצוא', desc: 'האירוע ישתמש בתזכורות שתוגדרנה במסך הייצוא.' },
+  { id: 'none', label: 'ללא תזכורות', desc: 'האירוע הזה ייוצא ללא תזכורות, גם אם בייצוא מוגדר אחרת.' },
+  { id: 'day-before', label: 'יום לפני בשעה 19:00', desc: 'עוקף את ברירת המחדל של הייצוא עבור האירוע הזה בלבד.' },
+  { id: 'week-before', label: 'שבוע לפני', desc: 'עוקף את ברירת המחדל של הייצוא עבור האירוע הזה בלבד.' },
+  { id: 'both', label: 'גם שבוע לפני וגם יום לפני ב-19:00', desc: 'עוקף את ברירת המחדל של הייצוא עבור האירוע הזה בלבד.' }
+];
+
+const buildReminderRules = (mode: ReminderMode): ReminderRule[] => {
+  switch (mode) {
+    case 'day-before':
+      return [{ id: 'day_before_19', label: 'יום לפני בשעה 19:00', trigger: '-P1D', time: '19:00' }];
+    case 'week-before':
+      return [{ id: 'week_before', label: 'שבוע לפני', trigger: '-P7D' }];
+    case 'both':
+      return [
+        { id: 'day_before_19', label: 'יום לפני בשעה 19:00', trigger: '-P1D', time: '19:00' },
+        { id: 'week_before', label: 'שבוע לפני', trigger: '-P7D' }
+      ];
+    default:
+      return [];
+  }
 };
 
 const getHebrewMonthSpan = (date: Date) => {
@@ -206,7 +232,7 @@ const TopBar = ({ title, onOpenMobileMenu }: { title: string, onOpenMobileMenu: 
 
 // --- Views ---
 
-const DashboardView = ({ events, onAddClick, onEdit, onDelete }: { events: CalendarEvent[], onAddClick: () => void, onEdit: (e: CalendarEvent) => void, onDelete: (id: string) => void }) => {
+const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { events: CalendarEvent[], onAddClick: () => void, onEdit: (e: CalendarEvent) => void, onDelete: (id: string) => void, onClearAll: () => void }) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -342,6 +368,12 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete }: { events: Calen
           </p>
         </div>
         <div className="flex gap-3">
+          <button
+            onClick={onClearAll}
+            className="px-4 py-2 bg-white text-red-600 border border-red-200 rounded-lg font-semibold text-sm shadow-sm flex items-center gap-2 hover:bg-red-50 active:scale-95 transition-all"
+          >
+            ניקוי רשימה
+          </button>
           <button 
             onClick={onAddClick}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold text-sm shadow-sm flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all"
@@ -550,7 +582,8 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
     month: initialData?.hebrewDate.month || 'ניסן',
     yearStr: initialData?.hebrewDate.year ? gematriya(initialData.hebrewDate.year) : (gematriya(5786) || 'תשפ״ו'),
     gregorianDate: format(new Date(), 'yyyy-MM-dd'),
-    afterSunset: initialData?.hebrewDate.afterSunset || false
+    afterSunset: initialData?.hebrewDate.afterSunset || false,
+    reminderOverride: (initialData?.reminderOverride || 'use-export-default') as ReminderMode
   });
 
   const months = [
@@ -626,7 +659,8 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
         month: hebrewMonthsRev[m] || 'ניסן',
         year: y,
         afterSunset: formData.afterSunset
-      }
+      },
+      reminderOverride: formData.reminderOverride
     });
   };
 
@@ -650,7 +684,7 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
                 {[
                   { id: 'birthday', label: 'יום הולדת', icon: Cake },
                   { id: 'anniversary', label: 'יום נישואין', icon: Heart },
-                  { id: 'yahrzeit', label: 'יארצייט', icon: Flame },
+                  { id: 'yahrzeit', label: 'אזכרה', icon: Flame },
                   ...uniqueCustomTypes.map(t => ({ id: t, label: t, icon: Star })),
                   { id: 'other', label: 'אחר...', icon: PlusCircle }
                 ].map((type) => (
@@ -796,6 +830,35 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
               </div>
             </div>
           )}
+        </section>
+
+        <section className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+          <div className="flex items-center gap-3 mb-4">
+            <Bell className="text-blue-600" size={20} />
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">עקיפת תזכורות לאירוע</h3>
+              <p className="text-xs text-slate-500 mt-1">הגדרה כאן תגבר על הגדרת התזכורות הגלובלית במסך הייצוא, עבור האירוע הזה בלבד.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {REMINDER_MODE_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setFormData({ ...formData, reminderOverride: option.id })}
+                className={cn(
+                  "text-right p-4 rounded-xl border transition-colors",
+                  formData.reminderOverride === option.id ? "border-blue-600 bg-blue-50" : "border-slate-200 hover:bg-slate-50"
+                )}
+              >
+                <span className="block text-sm font-bold text-slate-900">{option.label}</span>
+                <span className="block text-[11px] text-slate-500 mt-1 leading-relaxed">{option.desc}</span>
+              </button>
+            ))}
+          </div>
+          <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900 leading-relaxed">
+            <strong className="font-bold">שים לב:</strong> הגדרת "השתמש בהגדרת הייצוא" תחיל את בחירת התזכורות הגלובלית מדף הייצוא. כל בחירה אחרת כאן תגבר עליה.
+          </div>
         </section>
 
         <div className="flex flex-col md:flex-row gap-6">
@@ -1090,7 +1153,18 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
 
 const ImportExportView = ({ events, onImport }: { events: CalendarEvent[], onImport?: (events: CalendarEvent[]) => void }) => {
   const [selectedSchema, setSelectedSchema] = useState('xml');
+  const [reminderMode, setReminderMode] = useState<Exclude<ReminderMode, 'use-export-default'>>('none');
+  const uniqueEventTypes = useMemo(() => Array.from(new Set(events.map(e => e.type))), [events]);
+  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setSelectedEventTypes((prev) => {
+      const stillValid = prev.filter(type => uniqueEventTypes.includes(type));
+      const newTypes = uniqueEventTypes.filter(type => !stillValid.includes(type));
+      return [...stillValid, ...newTypes];
+    });
+  }, [uniqueEventTypes]);
 
   const processFile = (file: File) => {
     const reader = new FileReader();
@@ -1182,39 +1256,111 @@ const ImportExportView = ({ events, onImport }: { events: CalendarEvent[], onImp
     }
   };
 
+  const toggleEventType = (type: string) => {
+    setSelectedEventTypes(prev => (
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    ));
+  };
+
+  const exportEvents = useMemo(() => {
+    if (selectedEventTypes.length === 0) {
+      return [];
+    }
+    return events.filter(e => selectedEventTypes.includes(e.type));
+  }, [events, selectedEventTypes]);
+
+  const reminderRules = useMemo(() => buildReminderRules(reminderMode), [reminderMode]);
+
+  const getEventReminderMode = (event: CalendarEvent): ReminderMode => {
+    if (!event.reminderOverride || event.reminderOverride === 'use-export-default') {
+      return reminderMode;
+    }
+    return event.reminderOverride;
+  };
+
+  const getEventReminderRules = (event: CalendarEvent) => buildReminderRules(getEventReminderMode(event));
+
+  const exportSettings = {
+    selected_schema: selectedSchema,
+    selected_event_types: selectedEventTypes,
+    reminder_mode: reminderMode,
+    reminders: reminderRules.map(rule => ({
+      id: rule.id,
+      label: rule.label,
+      trigger: rule.trigger,
+      time: rule.time || null
+    }))
+  };
+
   const now = new Date().toISOString();
 
-  const xmlEvents = events.map(e => `    <event id="${e.id}" type="${e.type}">
+  const xmlEvents = exportEvents.map(e => {
+    const eventReminderMode = getEventReminderMode(e);
+    const eventReminderRules = getEventReminderRules(e);
+    const reminderNodes = eventReminderRules.length > 0
+      ? `\n      <reminders>\n${eventReminderRules.map(rule => `        <reminder id="${rule.id}" trigger="${rule.trigger}"${rule.time ? ` time="${rule.time}"` : ''} />`).join('\n')}\n      </reminders>`
+      : '\n      <reminders />';
+
+    return `    <event id="${e.id}" type="${e.type}">
       <title>${e.title}</title>
       <date>
         <hebrew>${e.hebrewDate.day} ${e.hebrewDate.month} ${e.hebrewDate.year}</hebrew>
       </date>
-    </event>`).join('\n');
+      <reminder_override>${e.reminderOverride || 'use-export-default'}</reminder_override>
+      <effective_reminder_mode>${eventReminderMode}</effective_reminder_mode>${reminderNodes}
+    </event>`;
+  }).join('\n');
+
+  const xmlSettingsReminders = reminderRules.length > 0
+    ? `\n${reminderRules.map(rule => `      <reminder id="${rule.id}" trigger="${rule.trigger}"${rule.time ? ` time="${rule.time}"` : ''} />`).join('\n')}\n    `
+    : '\n      <none />\n    ';
 
   const xmlPreview = `<?xml version="1.0" encoding="UTF-8"?>
-<scribe_calendar version="2.4">
+<hc4gc version="2.4">
   <metadata>
     <generated_at>${now}</generated_at>
     <scope>5784</scope>
     <location>Jerusalem</location>
   </metadata>
 
+  <export_settings>
+    <schema>${selectedSchema}</schema>
+    <selected_event_types>${selectedEventTypes.join(', ') || 'none'}</selected_event_types>
+    <reminder_mode>${reminderMode}</reminder_mode>
+    <reminders>${xmlSettingsReminders}</reminders>
+  </export_settings>
+
   <events>
 ${xmlEvents}
   </events>
-</scribe_calendar>`;
+</hc4gc>`;
 
-  const icsEvents = events.map(e => `BEGIN:VEVENT
+  const icsEvents = exportEvents.map(e => {
+    const eventReminderMode = getEventReminderMode(e);
+    const eventReminderRules = getEventReminderRules(e);
+    const icsReminders = eventReminderRules.map(rule => `BEGIN:VALARM\nACTION:DISPLAY\nDESCRIPTION:Reminder: ${e.title}\nTRIGGER:${rule.trigger}${rule.time ? `\nX-REMINDER-TIME:${rule.time}` : ''}\nEND:VALARM`).join('\n');
+    const reminderSection = icsReminders ? `${icsReminders}\n` : '';
+
+    return `BEGIN:VEVENT
 UID:${e.id}
 SUMMARY:${e.title}
 CATEGORIES:${e.type}
 X-HEBREW-DATE:${e.hebrewDate.day} ${e.hebrewDate.month} ${e.hebrewDate.year}
-END:VEVENT`).join('\n');
+X-REMINDER-OVERRIDE:${e.reminderOverride || 'use-export-default'}
+X-EFFECTIVE-REMINDER-MODE:${eventReminderMode}
+${reminderSection}END:VEVENT`;
+  }).join('\n');
+
+  const icsGlobalReminderIds = reminderRules.map(rule => rule.id).join(',') || 'none';
 
   const icsPreview = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Scribe Calendar//NONSGML App//EN
+PRODID:-//HC4GC//NONSGML App//EN
 CALSCALE:GREGORIAN
+X-EXPORT-SCHEMA:${selectedSchema.toUpperCase()}
+X-EXPORT-EVENT-TYPES:${selectedEventTypes.join(',') || 'none'}
+X-EXPORT-REMINDER-MODE:${reminderMode}
+X-EXPORT-REMINDERS:${icsGlobalReminderIds}
 ${icsEvents}
 END:VCALENDAR`;
 
@@ -1225,7 +1371,17 @@ END:VCALENDAR`;
       scope: "5784",
       location: "Jerusalem"
     },
-    events: events
+    export_settings: exportSettings,
+    events: exportEvents.map(event => ({
+      ...event,
+      effectiveReminderMode: getEventReminderMode(event),
+      reminders: getEventReminderRules(event).map(rule => ({
+        id: rule.id,
+        label: rule.label,
+        trigger: rule.trigger,
+        time: rule.time || null
+      }))
+    }))
   }, null, 2);
 
   const previews: Record<string, string> = {
@@ -1265,35 +1421,58 @@ END:VCALENDAR`;
           <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-right">
             <div className="flex items-center gap-3 mb-6">
                <ArrowLeftRight className="text-blue-600" size={20} />
-              <h3 className="font-bold text-lg">טווח אירועים לייצוא</h3>
+              <h3 className="font-bold text-lg">הגדרות ייצוא</h3>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">טווח תאריכים</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-slate-50 px-3 py-2 rounded border border-slate-100">
-                    <span className="block text-[10px] text-slate-400">התחלה</span>
-                    <span className="text-sm font-medium">א' תשרי ה'תשפ״ד</span>
-                  </div>
-                  <div className="bg-slate-50 px-3 py-2 rounded border border-slate-100">
-                    <span className="block text-[10px] text-slate-400">סיום</span>
-                    <span className="text-sm font-medium">כ״ט אלול ה'תשפ״ד</span>
-                  </div>
-                </div>
-              </div>
-              <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-3">כלול סוגי אירועים</label>
                 <div className="flex flex-wrap gap-2 justify-start">
-                  <span className="px-3 py-1.5 rounded-full bg-blue-600 text-white text-xs font-medium flex items-center gap-2">
-                    זמנים <Check size={14} />
-                  </span>
-                  <span className="px-3 py-1.5 rounded-full bg-blue-100 text-blue-800 text-xs font-medium flex items-center gap-2">
-                    חגים <Check size={14} />
-                  </span>
-                  <span className="px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-xs font-medium flex items-center gap-2 cursor-pointer hover:bg-slate-200 transition-colors">
-                    פרשיות <Plus size={14} />
-                  </span>
-                 </div>
+                  {uniqueEventTypes.length === 0 && (
+                    <span className="text-xs text-slate-400">אין סוגי אירועים זמינים כרגע</span>
+                  )}
+                  {uniqueEventTypes.map(type => {
+                    const selected = selectedEventTypes.includes(type);
+                    return (
+                      <button
+                        type="button"
+                        key={type}
+                        onClick={() => toggleEventType(type)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 transition-colors",
+                          selected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                        )}
+                      >
+                        {type}
+                        {selected ? <Check size={14} /> : <Plus size={14} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-3">תזכורות לאירועים מיוצאים</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {[
+                    { id: 'none', label: 'ללא תזכורות', desc: 'לא תתווסף תזכורת לקבצים המיוצאים' },
+                    { id: 'day-before', label: 'יום לפני בשעה 19:00', desc: 'תזכורת אחת בערב שלפני האירוע' },
+                    { id: 'week-before', label: 'שבוע לפני', desc: 'תזכורת אחת 7 ימים לפני האירוע' },
+                    { id: 'both', label: 'גם וגם', desc: 'שבוע לפני וגם יום לפני ב-19:00' },
+                  ].map(option => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setReminderMode(option.id as Exclude<ReminderMode, 'use-export-default'>)}
+                      className={cn(
+                        "text-right p-3 rounded-lg border transition-colors",
+                        reminderMode === option.id ? "border-blue-600 bg-blue-50" : "border-slate-200 hover:bg-slate-50"
+                      )}
+                    >
+                      <span className="block text-xs font-bold text-slate-900">{option.label}</span>
+                      <span className="block text-[10px] text-slate-500 mt-1">{option.desc}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
            </section>
@@ -1396,11 +1575,29 @@ END:VCALENDAR`;
 // --- Main App ---
 
 export default function App() {
+  const EVENTS_STORAGE_KEY = 'hc4gc.events.v1';
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>(() => {
+    try {
+      const raw = window.localStorage.getItem(EVENTS_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(events));
+    } catch {
+      // Ignore storage errors (private mode/quota issues) and keep app functional.
+    }
+  }, [events]);
 
   useEffect(() => {
     document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';
@@ -1430,6 +1627,18 @@ export default function App() {
     }
   };
 
+  const handleClearAll = () => {
+    if (events.length === 0) {
+      alert('הרשימה כבר ריקה.');
+      return;
+    }
+    if (window.confirm('למחוק את כל האירועים מהרשימה?')) {
+      setEvents([]);
+      setEditingEvent(null);
+      setActiveTab('dashboard');
+    }
+  };
+
   const handleImportEvents = (importedEvents: CalendarEvent[]) => {
     setEvents(importedEvents);
     alert(`יובאו בהצלחה ${importedEvents.length} אירועים!`);
@@ -1438,7 +1647,7 @@ export default function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardView events={events} onAddClick={() => setActiveTab('add-event')} onEdit={handleEdit} onDelete={handleDelete} />;
+        return <DashboardView events={events} onAddClick={() => setActiveTab('add-event')} onEdit={handleEdit} onDelete={handleDelete} onClearAll={handleClearAll} />;
       case 'calendar':
         return <CalendarView events={events} />;
       case 'add-event':
@@ -1454,7 +1663,7 @@ export default function App() {
       case 'import-export':
         return <ImportExportView events={events} onImport={handleImportEvents} />;
       default:
-        return <DashboardView events={events} onAddClick={() => setActiveTab('add-event')} onEdit={handleEdit} onDelete={handleDelete} />;
+        return <DashboardView events={events} onAddClick={() => setActiveTab('add-event')} onEdit={handleEdit} onDelete={handleDelete} onClearAll={handleClearAll} />;
     }
   };
 

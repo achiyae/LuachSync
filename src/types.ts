@@ -1,4 +1,5 @@
 export type EventType = 'birthday' | 'anniversary' | 'yahrzeit' | string;
+export type ReminderMode = 'use-export-default' | 'none' | 'day-before' | 'week-before' | 'both';
 
 export interface CalendarEvent {
   id: string;
@@ -10,6 +11,7 @@ export interface CalendarEvent {
     year: number;
     afterSunset?: boolean;
   };
+  reminderOverride?: ReminderMode;
 }
 
 export interface ZmanimData {
