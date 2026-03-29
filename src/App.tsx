@@ -15,6 +15,7 @@ import {
   Bell, 
   ChevronRight, 
   ChevronLeft,
+  Menu,
   MoreVertical,
   Cake,
   Heart,
@@ -63,7 +64,14 @@ const getHebrewMonthSpan = (date: Date) => {
 
 // --- Components ---
 
-const Sidebar = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (tab: string) => void }) => {
+const Sidebar = ({ activeTab, setActiveTab, isCollapsed, onToggleCollapse, isMobileMenuOpen, onCloseMobileMenu }: {
+  activeTab: string,
+  setActiveTab: (tab: string) => void,
+  isCollapsed: boolean,
+  onToggleCollapse: () => void,
+  isMobileMenuOpen: boolean,
+  onCloseMobileMenu: () => void
+}) => {
   const navItems = [
     { id: 'dashboard', label: 'לוח בקרה', icon: LayoutDashboard },
     { id: 'calendar', label: 'לוח שנה', icon: CalendarIcon },
@@ -72,16 +80,45 @@ const Sidebar = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
   ];
 
   return (
-    <aside className="h-screen w-64 fixed right-0 top-0 border-l border-slate-200 bg-slate-100 flex flex-col p-4 gap-2 z-50 overflow-y-auto">
+    <aside className={cn(
+      "h-screen fixed right-0 top-0 border-l border-slate-200 bg-slate-100 flex flex-col p-4 gap-2 z-50 overflow-y-auto transition-all duration-300 w-72 max-w-[88vw] md:max-w-none",
+      isCollapsed ? "md:w-20" : "md:w-64",
+      isMobileMenuOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"
+    )}>
       <div className="mb-8 px-2">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded bg-blue-600 flex items-center justify-center text-white">
-            <BookOpen size={20} />
-          </div>
-          <div>
-            <h2 className="font-bold text-blue-900 leading-tight">סופר מהיר</h2>
-            <p className="text-[10px] uppercase tracking-widest text-slate-500 opacity-70">מערכת לוח שנה עברי</p>
-          </div>
+        <div className={cn("flex items-center", isCollapsed ? "justify-center" : "justify-between gap-3")}>
+          {!isCollapsed && (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded bg-blue-600 flex items-center justify-center text-white">
+                <BookOpen size={20} />
+              </div>
+              <div>
+                <h2 className="font-bold text-blue-900 leading-tight">סופר מהיר</h2>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500 opacity-70">מערכת לוח שנה עברי</p>
+              </div>
+            </div>
+          )}
+          {isCollapsed && (
+            <div className="w-10 h-10 rounded bg-blue-600 flex items-center justify-center text-white">
+              <BookOpen size={20} />
+            </div>
+          )}
+          <button
+            onClick={onToggleCollapse}
+            title={isCollapsed ? 'הרחב תפריט' : 'כווץ תפריט'}
+            aria-label={isCollapsed ? 'הרחב תפריט' : 'כווץ תפריט'}
+            className="hidden md:inline-flex p-2 rounded-lg text-slate-500 hover:text-blue-700 hover:bg-slate-200 transition-colors"
+          >
+            {isCollapsed ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+          </button>
+          <button
+            onClick={onCloseMobileMenu}
+            title="סגור תפריט"
+            aria-label="סגור תפריט"
+            className="md:hidden inline-flex p-2 rounded-lg text-slate-500 hover:text-blue-700 hover:bg-slate-200 transition-colors"
+          >
+            <ChevronRight size={18} />
+          </button>
         </div>
       </div>
       
@@ -89,37 +126,62 @@ const Sidebar = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
         {navItems.map((item) => (
           <button
             key={item.id}
-            onClick={() => setActiveTab(item.id)}
+            onClick={() => {
+              setActiveTab(item.id);
+              onCloseMobileMenu();
+            }}
+            title={isCollapsed ? item.label : undefined}
             className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 ease-in-out text-right",
+              "flex items-center px-3 py-2 rounded-lg transition-all duration-200 ease-in-out text-right",
+              isCollapsed ? "justify-center" : "gap-3",
               activeTab === item.id 
                 ? "bg-white text-blue-700 font-bold shadow-sm" 
                 : "text-slate-600 hover:text-blue-600 hover:bg-slate-200"
             )}
           >
             <item.icon size={18} />
-            <span className="text-sm tracking-wide">{item.label}</span>
+            {!isCollapsed && <span className="text-sm tracking-wide">{item.label}</span>}
           </button>
         ))}
       </nav>
 
       <div className="mt-auto border-t border-slate-200 pt-4 flex flex-col gap-1">
-        <button className="w-full mb-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 active:scale-95 transition-all">
-          סנכרון לוח שנה
+        <button
+          title="סנכרון לוח שנה"
+          className={cn(
+            "w-full mb-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 active:scale-95 transition-all",
+            isCollapsed && "px-0"
+          )}
+        >
+          {isCollapsed ? <ArrowLeftRight size={18} className="mx-auto" /> : 'סנכרון לוח שנה'}
         </button>
-        <button className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:text-blue-600 hover:bg-slate-200 rounded-lg transition-all text-right w-full">
+        <button
+          title="תמיכה"
+          className={cn(
+            "flex items-center px-3 py-2 text-slate-600 hover:text-blue-600 hover:bg-slate-200 rounded-lg transition-all text-right w-full",
+            isCollapsed ? "justify-center" : "gap-3"
+          )}
+        >
           <HelpCircle size={18} />
-          <span className="text-sm tracking-wide">תמיכה</span>
+          {!isCollapsed && <span className="text-sm tracking-wide">תמיכה</span>}
         </button>
       </div>
     </aside>
   );
 };
 
-const TopBar = ({ title }: { title: string }) => {
+const TopBar = ({ title, onOpenMobileMenu }: { title: string, onOpenMobileMenu: () => void }) => {
   return (
-    <header className="w-full sticky top-0 z-40 bg-slate-50 flex justify-between items-center px-6 py-3 border-b border-slate-200/50">
+    <header className="w-full sticky top-0 z-40 bg-slate-50 flex justify-between items-center px-4 sm:px-6 py-3 border-b border-slate-200/50">
       <div className="flex items-center gap-4">
+        <button
+          onClick={onOpenMobileMenu}
+          className="md:hidden p-2 rounded-lg hover:bg-slate-200/70 transition-colors text-slate-600"
+          aria-label="פתח תפריט"
+          title="פתח תפריט"
+        >
+          <Menu size={20} />
+        </button>
         <h1 className="text-xl font-bold tracking-tight text-blue-900">{title}</h1>
       </div>
       <div className="flex items-center gap-4">
@@ -1249,6 +1311,15 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
 
   const handleSaveEvent = (newEvent: CalendarEvent) => {
     if (editingEvent) {
@@ -1311,10 +1382,28 @@ export default function App() {
 
   return (
     <div className="bg-slate-50 text-slate-900 min-h-screen flex font-['Assistant',_sans-serif]" dir="rtl">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      {isMobileMenuOpen && (
+        <button
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="fixed inset-0 bg-slate-900/35 backdrop-blur-[1px] z-40 md:hidden"
+          aria-label="סגור תפריט"
+        />
+      )}
+
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
+        isMobileMenuOpen={isMobileMenuOpen}
+        onCloseMobileMenu={() => setIsMobileMenuOpen(false)}
+      />
       
-      <main className="flex-1 mr-64 flex flex-col min-h-screen">
-        <TopBar title={getTitle()} />
+      <main className={cn(
+        "flex-1 flex flex-col min-h-screen transition-all duration-300 mr-0",
+        isSidebarCollapsed ? "md:mr-20" : "md:mr-64"
+      )}>
+        <TopBar title={getTitle()} onOpenMobileMenu={() => setIsMobileMenuOpen(true)} />
         
         <div className="flex-1 overflow-y-auto">
           <AnimatePresence mode="wait">
@@ -1330,11 +1419,11 @@ export default function App() {
           </AnimatePresence>
         </div>
 
-        <footer className="w-full mt-auto py-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center px-8">
+        <footer className="w-full mt-auto py-4 border-t border-slate-200 bg-slate-50 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center px-4 sm:px-8">
           <div className="text-slate-400 font-inter text-[11px] uppercase tracking-widest">
             © 2024 הסופר המודרני • מערכת פעילה
           </div>
-          <div className="flex gap-6">
+          <div className="flex gap-6 flex-wrap">
             <button className="text-slate-400 hover:text-blue-800 font-inter text-[11px] uppercase tracking-widest transition-colors opacity-80 hover:opacity-100">סטטוס</button>
             <button className="text-slate-400 hover:text-blue-800 font-inter text-[11px] uppercase tracking-widest transition-colors opacity-80 hover:opacity-100">פרטיות</button>
             <button className="text-slate-400 hover:text-blue-800 font-inter text-[11px] uppercase tracking-widest transition-colors opacity-80 hover:opacity-100">תנאים</button>
@@ -1345,8 +1434,14 @@ export default function App() {
       {/* Floating Action Button */}
       {activeTab !== 'add-event' && (
         <button 
-          onClick={() => setActiveTab('add-event')}
-          className="fixed bottom-8 left-8 h-14 w-14 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 text-white shadow-2xl flex items-center justify-center group active:scale-95 transition-all z-50"
+          onClick={() => {
+            setActiveTab('add-event');
+            setIsMobileMenuOpen(false);
+          }}
+          className={cn(
+            "fixed bottom-5 left-5 md:bottom-8 md:left-8 h-12 w-12 md:h-14 md:w-14 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 text-white shadow-2xl flex items-center justify-center group active:scale-95 transition-all z-50",
+            isMobileMenuOpen && "opacity-0 pointer-events-none"
+          )}
         >
           <Plus className="group-hover:rotate-90 transition-transform" size={24} />
         </button>
