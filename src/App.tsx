@@ -38,6 +38,65 @@ import { he } from 'date-fns/locale';
 import { cn } from './lib/utils';
 import { CalendarEvent, EventType, ReminderMode } from './types';
 
+type GoogleTokenResponse = {
+  access_token?: string;
+  error?: string;
+  error_description?: string;
+};
+
+type GoogleTokenClient = {
+  requestAccessToken: (overrideConfig?: { prompt?: string }) => void;
+};
+
+type GoogleSyncEvent = {
+  summary: string;
+  type: string;
+  eventDate: Date;
+  reminders: Array<{ method: 'popup'; minutes: number }>;
+};
+
+type GoogleCalendarListEntry = {
+  id: string;
+  summary?: string;
+};
+
+type GoogleCalendarListResponse = {
+  items?: GoogleCalendarListEntry[];
+  nextPageToken?: string;
+};
+
+type GoogleCalendarEventsListResponse = {
+  items?: Array<{ id?: string }>;
+  nextPageToken?: string;
+};
+
+type GoogleSyncSummary = {
+  calendarId: string;
+  calendarName: string;
+  usedExistingCalendar: boolean;
+  deleted: number;
+  deleteFailed: number;
+  inserted: number;
+  failed: number;
+};
+
+declare global {
+  interface Window {
+    google?: {
+      accounts?: {
+        oauth2?: {
+          initTokenClient: (config: {
+            client_id: string;
+            scope: string;
+            callback: (response: GoogleTokenResponse) => void;
+            error_callback?: (error: unknown) => void;
+          }) => GoogleTokenClient;
+        };
+      };
+    };
+  }
+}
+
 // --- Helpers ---
 const hebrewMonthsMap: Record<string, string> = {
     'Nisan': 'ניסן', 'Iyyar': 'אייר', 'Sivan': 'סיוון', 'Tamuz': 'תמוז', 'Av': 'אב', 'Elul': 'אלול',
@@ -1208,11 +1267,19 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
 };
 
 const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsChange }: { events: CalendarEvent[], onImport?: (payload: ImportPayload) => void, exportSettings: ExportSettingsState, onExportSettingsChange: React.Dispatch<React.SetStateAction<ExportSettingsState>> }) => {
+  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+  const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
   const selectedSchema = exportSettings.selectedSchema;
   const reminderMode = exportSettings.reminderMode;
   const uniqueEventTypes = useMemo(() => Array.from(new Set(events.map(e => e.type))), [events]);
   const selectedEventTypes = exportSettings.selectedEventTypes;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const googleTokenClientRef = useRef<GoogleTokenClient | null>(null);
+  const [isGoogleScriptReady, setIsGoogleScriptReady] = useState(false);
+  const [isGoogleSyncing, setIsGoogleSyncing] = useState(false);
+  const [googleSyncStatus, setGoogleSyncStatus] = useState<string>('');
+  const [targetCalendarName, setTargetCalendarName] = useState('HC4GC');
+  const [googleSyncSummary, setGoogleSyncSummary] = useState<GoogleSyncSummary | null>(null);
 
   const normalizeReminderMode = (mode: string | undefined): ExportSettingsState['reminderMode'] => {
     if (mode === 'day-before' || mode === 'week-before' || mode === 'both' || mode === 'none') {
@@ -1380,7 +1447,27 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
 
   const getEventReminderRules = (event: CalendarEvent) => buildReminderRules(getEventReminderMode(event));
 
-  const now = new Date().toISOString();
+  useEffect(() => {
+    if (window.google?.accounts?.oauth2) {
+      setIsGoogleScriptReady(true);
+      return;
+    }
+
+    const existing = document.querySelector<HTMLScriptElement>('script[data-google-identity="true"]');
+    if (existing) {
+      existing.addEventListener('load', () => setIsGoogleScriptReady(true), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.dataset.googleIdentity = 'true';
+    script.onload = () => setIsGoogleScriptReady(true);
+    script.onerror = () => setIsGoogleScriptReady(false);
+    document.head.appendChild(script);
+  }, []);
 
   const hebrewToEnglishMonth: Record<string, string> = {
     'ניסן': 'Nisan',
@@ -1459,6 +1546,61 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
       return new Date();
     }
   };
+
+  const toGoogleReminderMinutes = (rule: ReminderRule) => {
+    if (rule.id === 'day_before_19') {
+      // For an all-day event (00:00), 19:00 on the previous day is 300 minutes before start.
+      return 300;
+    }
+
+    const triggerMatch = /^-P(\d+)D$/.exec(rule.trigger);
+    if (triggerMatch) {
+      return Number(triggerMatch[1]) * 24 * 60;
+    }
+
+    return 0;
+  };
+
+  const buildGoogleReminderOverrides = (eventReminderRules: ReminderRule[]) => {
+    const minutesSet = new Set<number>();
+
+    for (const rule of eventReminderRules) {
+      const minutes = toGoogleReminderMinutes(rule);
+      if (minutes >= 0) {
+        minutesSet.add(minutes);
+      }
+    }
+
+    return Array.from(minutesSet).map((minutes) => ({ method: 'popup' as const, minutes }));
+  };
+
+  const syncEventsForGoogle = useMemo<GoogleSyncEvent[]>(() => {
+    const generated: GoogleSyncEvent[] = [];
+
+    for (const event of exportEvents) {
+      const eventReminderRules = getEventReminderRules(event);
+      const reminders = buildGoogleReminderOverrides(eventReminderRules);
+      const month = hebrewToEnglishMonth[event.hebrewDate.month] || 'Nisan';
+      const eventTypeLabel = getEventTypeSyncLabel(event.type);
+
+      for (let i = 0; i < 100; i++) {
+        const targetHebrewYear = event.hebrewDate.year + i;
+        try {
+          const hd = new HDate(event.hebrewDate.day, month, targetHebrewYear);
+          generated.push({
+            summary: `${eventTypeLabel} ל${event.title} (${i})`,
+            type: event.type,
+            eventDate: hd.greg(),
+            reminders
+          });
+        } catch {
+          // Skip years where this Hebrew date does not exist.
+        }
+      }
+    }
+
+    return generated;
+  }, [exportEvents, reminderMode]);
 
   const icsConfigEvents = exportEvents.map(e => {
     const exportBaseId = normalizeExportBaseId(e.id);
@@ -1562,11 +1704,270 @@ END:VCALENDAR`;
     downloadIcsFile();
   };
 
-  const handleGoogleCalendarSync = () => {
-    const fileStamp = new Date().toISOString().replace(/[:.]/g, '-');
-    downloadIcsFile(`hc4gc_sync_${fileStamp}.ics`);
-    window.open('https://calendar.google.com/calendar/u/0/r/settings/export', '_blank', 'noopener,noreferrer');
-    alert('קובץ ICS נוצר והורד. בחלון גוגל קלנדר שנפתח, בחר Import ובחר את הקובץ שהורד.');
+  const requestGoogleAccessToken = () => {
+    return new Promise<string>((resolve, reject) => {
+      if (!GOOGLE_CLIENT_ID) {
+        reject(new Error('Missing Google OAuth client ID.'));
+        return;
+      }
+
+      const oauth2 = window.google?.accounts?.oauth2;
+      if (!oauth2) {
+        reject(new Error('Google Identity Services not loaded.'));
+        return;
+      }
+
+      if (!googleTokenClientRef.current) {
+        googleTokenClientRef.current = oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: GOOGLE_CALENDAR_SCOPE,
+          callback: (resp: GoogleTokenResponse) => {
+            if (resp.error || !resp.access_token) {
+              reject(new Error(resp.error_description || resp.error || 'OAuth failed.'));
+              return;
+            }
+            resolve(resp.access_token);
+          },
+          error_callback: () => reject(new Error('OAuth popup was closed or blocked.'))
+        });
+      }
+
+      googleTokenClientRef.current.requestAccessToken({ prompt: 'consent' });
+    });
+  };
+
+  const callGoogleCalendarApi = async <T,>(accessToken: string, url: string, init?: RequestInit): Promise<T> => {
+    const response = await fetch(url, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        ...(init?.headers || {})
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Google Calendar API request failed.');
+    }
+
+    return response.json() as Promise<T>;
+  };
+
+  const runWithConcurrency = async <T,>(
+    items: T[],
+    concurrency: number,
+    worker: (item: T, index: number) => Promise<void>
+  ) => {
+    let index = 0;
+    const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+      while (index < items.length) {
+        const current = index;
+        index += 1;
+        await worker(items[current], current);
+      }
+    });
+
+    await Promise.all(workers);
+  };
+
+  const findOwnedCalendarByName = async (accessToken: string, calendarName: string) => {
+    let pageToken: string | undefined;
+    const normalizedTarget = calendarName.trim().toLowerCase();
+
+    do {
+      const searchParams = new URLSearchParams({
+        minAccessRole: 'owner',
+        showDeleted: 'false',
+        maxResults: '250'
+      });
+      if (pageToken) {
+        searchParams.set('pageToken', pageToken);
+      }
+
+      const response = await callGoogleCalendarApi<GoogleCalendarListResponse>(
+        accessToken,
+        `https://www.googleapis.com/calendar/v3/users/me/calendarList?${searchParams.toString()}`
+      );
+
+      const found = (response.items || []).find((item) => (item.summary || '').trim().toLowerCase() === normalizedTarget);
+      if (found) {
+        return found;
+      }
+
+      pageToken = response.nextPageToken;
+    } while (pageToken);
+
+    return null;
+  };
+
+  const clearCalendarEvents = async (accessToken: string, calendarId: string) => {
+    let pageToken: string | undefined;
+    let deleted = 0;
+    let deleteFailed = 0;
+
+    do {
+      const searchParams = new URLSearchParams({
+        showDeleted: 'false',
+        maxResults: '250'
+      });
+      if (pageToken) {
+        searchParams.set('pageToken', pageToken);
+      }
+
+      const listResp = await callGoogleCalendarApi<GoogleCalendarEventsListResponse>(
+        accessToken,
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${searchParams.toString()}`
+      );
+
+      const eventIds = (listResp.items || []).map((item) => item.id).filter((id): id is string => !!id);
+
+      await runWithConcurrency<string>(eventIds, 8, async (eventId) => {
+        try {
+          await callGoogleCalendarApi(
+            accessToken,
+            `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+            { method: 'DELETE' }
+          );
+          deleted += 1;
+        } catch {
+          deleteFailed += 1;
+        }
+      });
+
+      pageToken = listResp.nextPageToken;
+    } while (pageToken);
+
+    return { deleted, deleteFailed };
+  };
+
+  const handleGoogleCalendarSync = async () => {
+    if (!GOOGLE_CLIENT_ID) {
+      alert('לא הוגדר VITE_GOOGLE_CLIENT_ID. הוסף את המשתנה בקובץ .env.local והפעל מחדש את היישום.');
+      return;
+    }
+    if (!isGoogleScriptReady) {
+      alert('Google Identity Services עדיין נטען. נסה שוב בעוד רגע.');
+      return;
+    }
+    if (syncEventsForGoogle.length === 0) {
+      alert('אין אירועים מסומנים לייצוא/סנכרון.');
+      return;
+    }
+    if (!targetCalendarName.trim()) {
+      alert('נא להזין שם יומן לסנכרון.');
+      return;
+    }
+
+    setGoogleSyncSummary(null);
+    setIsGoogleSyncing(true);
+    setGoogleSyncStatus('מתחבר לחשבון Google...');
+
+    try {
+      const accessToken = await requestGoogleAccessToken();
+      const normalizedCalendarName = targetCalendarName.trim();
+
+      setGoogleSyncStatus('בודק אם קיים יומן בשם המבוקש...');
+      const existingCalendar = await findOwnedCalendarByName(accessToken, normalizedCalendarName);
+
+      let calendarId = '';
+      let calendarName = normalizedCalendarName;
+      let usedExistingCalendar = false;
+      let deleted = 0;
+      let deleteFailed = 0;
+
+      if (existingCalendar) {
+        const shouldOverwrite = window.confirm(`נמצא כבר יומן בשם "${normalizedCalendarName}". כל האירועים הקיימים בו יימחקו לפני סנכרון. להמשיך?`);
+        if (!shouldOverwrite) {
+          return;
+        }
+
+        usedExistingCalendar = true;
+        calendarId = existingCalendar.id;
+        calendarName = existingCalendar.summary || normalizedCalendarName;
+
+        setGoogleSyncStatus('מוחק את כל האירועים הקיימים ביומן...');
+        const clearResult = await clearCalendarEvents(accessToken, calendarId);
+        deleted = clearResult.deleted;
+        deleteFailed = clearResult.deleteFailed;
+      } else {
+        setGoogleSyncStatus('יוצר יומן חדש...');
+        const createdCalendar = await callGoogleCalendarApi<{ id: string; summary?: string }>(
+          accessToken,
+          'https://www.googleapis.com/calendar/v3/calendars',
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              summary: normalizedCalendarName,
+              description: 'Created by HC4GC sync flow',
+              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            })
+          }
+        );
+        calendarId = createdCalendar.id;
+        calendarName = createdCalendar.summary || normalizedCalendarName;
+      }
+
+      let inserted = 0;
+      let failed = 0;
+      const total = syncEventsForGoogle.length;
+      setGoogleSyncStatus(`מעלה אירועים ליומן "${calendarName}"... 0/${total}`);
+
+      await runWithConcurrency<GoogleSyncEvent>(syncEventsForGoogle, 6, async (syncEvent) => {
+        const startDate = formatIcsDate(syncEvent.eventDate);
+        const endDate = formatIcsDate(addDays(syncEvent.eventDate, 1));
+
+        try {
+          await callGoogleCalendarApi(
+            accessToken,
+            `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                summary: syncEvent.summary,
+                start: { date: startDate },
+                end: { date: endDate },
+                transparency: 'transparent',
+                reminders: {
+                  useDefault: false,
+                  overrides: syncEvent.reminders
+                },
+                extendedProperties: {
+                  private: {
+                    hc4gcType: syncEvent.type
+                  }
+                }
+              })
+            }
+          );
+          inserted += 1;
+        } catch {
+          failed += 1;
+        }
+
+        const processed = inserted + failed;
+        if (processed % 25 === 0 || processed === total) {
+          setGoogleSyncStatus(`מעלה אירועים ליומן "${calendarName}"... ${processed}/${total}`);
+        }
+      });
+
+      setGoogleSyncStatus('הסנכרון הושלם. מכין סיכום...');
+      setGoogleSyncSummary({
+        calendarId,
+        calendarName,
+        usedExistingCalendar,
+        deleted,
+        deleteFailed,
+        inserted,
+        failed
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'שגיאה לא צפויה בסנכרון.';
+      alert(`שגיאה בסנכרון מול Google Calendar: ${message}`);
+    } finally {
+      setIsGoogleSyncing(false);
+      setGoogleSyncStatus('');
+    }
   };
 
   const handleCopy = () => {
@@ -1666,14 +2067,27 @@ END:VCALENDAR`;
            </section>
 
            <div className="pt-2">
+            <div className="bg-white border border-slate-200 rounded-xl p-4 mb-3 text-right">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">שם היומן בגוגל לסנכרון</label>
+              <input
+                type="text"
+                value={targetCalendarName}
+                onChange={(e) => setTargetCalendarName(e.target.value)}
+                disabled={isGoogleSyncing}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-sm text-right focus:ring-2 focus:ring-blue-500/20"
+                placeholder="למשל: HebrewCalendar משפחה"
+              />
+              <p className="mt-2 text-[10px] text-slate-500 leading-relaxed">אם יומן בשם הזה כבר קיים בחשבון שלך, תוצג אזהרה וכל האירועים הקיימים בו יימחקו לפני הסנכרון.</p>
+            </div>
             <button onClick={handleDownload} className="w-full bg-gradient-to-r from-blue-600 to-blue-800 p-4 rounded-xl text-white font-bold flex items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-all group">
                <Download className="group-hover:translate-y-1 transition-transform" size={20} />
               בצע הורדת נתונים
             </button>
-              <button onClick={handleGoogleCalendarSync} className="w-full mt-3 bg-white border border-blue-200 text-blue-700 p-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-sm hover:bg-blue-50 active:scale-[0.98] transition-all group">
+              <button onClick={handleGoogleCalendarSync} disabled={isGoogleSyncing} className={cn("w-full mt-3 bg-white border border-blue-200 text-blue-700 p-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-sm transition-all group", isGoogleSyncing ? "opacity-60 cursor-not-allowed" : "hover:bg-blue-50 active:scale-[0.98]")}>
                 <ArrowLeftRight className="group-hover:rotate-6 transition-transform" size={20} />
-                סנכרון לוח שנה
+                {isGoogleSyncing ? 'מסנכרן ליומן חדש...' : 'סנכרון אוטומטי ליומן חדש'}
               </button>
+            {googleSyncStatus && <p className="text-center mt-2 text-[11px] text-blue-600 font-semibold">{googleSyncStatus}</p>}
             <p className="text-center mt-3 text-[11px] text-slate-400 uppercase tracking-widest opacity-60">נפח משוער: 442 KB</p>
            </div>
          </div>
@@ -1705,11 +2119,74 @@ END:VCALENDAR`;
              <Info className="text-blue-600 shrink-0" size={20} />
              <p className="text-xs text-slate-600 leading-relaxed">
               <strong className="text-slate-900 block mb-1">הערת מפתח</strong>
-               כפתור הסנכרון יוצר קובץ ICS לפי הגדרות הייצוא שבחרת ופותח את מסך הייבוא של Google Calendar כדי להשלים את הייבוא.
+               כפתור הסנכרון האוטומטי מסנכרן לפי שם היומן שתגדיר. אם היומן כבר קיים - תוצג אזהרה, וכל האירועים הקיימים בו יימחקו לפני העלאה מחדש.
              </p>
            </div>
          </div>
       </div>
+
+      <AnimatePresence>
+        {googleSyncSummary && (
+          <>
+            <motion.button
+              type="button"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setGoogleSyncSummary(null)}
+              className="fixed inset-0 z-[70] bg-slate-900/40 backdrop-blur-[1px]"
+              aria-label="סגור סיכום סנכרון"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-x-3 bottom-3 sm:inset-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[30rem] z-[71] bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 text-right"
+              dir="rtl"
+            >
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-widest text-slate-500 font-bold">סיכום סנכרון Google Calendar</p>
+                  <h3 className="text-lg font-extrabold text-slate-900 leading-tight mt-1 break-words">{googleSyncSummary.calendarName}</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setGoogleSyncSummary(null)}
+                  className="shrink-0 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold transition-colors"
+                >
+                  סגור
+                </button>
+              </div>
+
+              <div className="space-y-2 text-sm text-slate-700">
+                <div className="flex justify-between"><span>מצב יומן</span><span className="font-bold">{googleSyncSummary.usedExistingCalendar ? 'יומן קיים (נוקה)' : 'יומן חדש'}</span></div>
+                <div className="flex justify-between"><span>אירועים שהוזנו</span><span className="font-bold text-blue-700">{googleSyncSummary.inserted}</span></div>
+                <div className="flex justify-between"><span>אירועים שנכשלו בהזנה</span><span className="font-bold text-amber-700">{googleSyncSummary.failed}</span></div>
+                <div className="flex justify-between"><span>אירועים שנמחקו לפני הסנכרון</span><span className="font-bold">{googleSyncSummary.deleted}</span></div>
+                <div className="flex justify-between"><span>כשלים במחיקה</span><span className="font-bold text-amber-700">{googleSyncSummary.deleteFailed}</span></div>
+              </div>
+
+              <div className="mt-5 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.open(`https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent(googleSyncSummary.calendarId)}`, '_blank', 'noopener,noreferrer')}
+                  className="flex-1 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors"
+                >
+                  פתח את היומן בגוגל
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGoogleSyncSummary(null)}
+                  className="px-3 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm font-bold hover:bg-slate-200 transition-colors"
+                >
+                  סגור
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
      </div>
   );
 };
