@@ -1416,6 +1416,40 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
     return `${y}${m}${d}T${hh}${mm}${ss}Z`;
   };
 
+  const resolveAlarmDate = (eventDate: Date, rule: ReminderRule) => {
+    const triggerMatch = /^-P(\d+)D$/.exec(rule.trigger);
+    const dayOffset = triggerMatch ? Number(triggerMatch[1]) : 0;
+    const alarmDate = addDays(eventDate, -dayOffset);
+
+    if (rule.time) {
+      const [hours, minutes] = rule.time.split(':').map(Number);
+      alarmDate.setHours(hours || 0, minutes || 0, 0, 0);
+    }
+
+    return alarmDate;
+  };
+
+  const buildIcsReminders = (summary: string, eventDate: Date, eventReminderRules: ReminderRule[]) => {
+    const escapedDescription = escapeIcsText(summary);
+
+    return eventReminderRules.map((rule) => {
+      const lines = [
+        'BEGIN:VALARM',
+        'ACTION:DISPLAY',
+        `DESCRIPTION:${escapedDescription}`,
+      ];
+
+      if (rule.time) {
+        lines.push(`TRIGGER;VALUE=DATE-TIME:${formatIcsUtcDateTime(resolveAlarmDate(eventDate, rule))}`);
+      } else {
+        lines.push(`TRIGGER;RELATED=START:${rule.trigger}`);
+      }
+
+      lines.push('END:VALARM');
+      return lines.join('\n');
+    }).join('\n');
+  };
+
   const resolveEventGregorianDate = (event: CalendarEvent) => {
     try {
       const month = hebrewToEnglishMonth[event.hebrewDate.month] || 'Nisan';
@@ -1436,9 +1470,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
     const dtStamp = formatIcsUtcDateTime(new Date());
     const escapedSummary = escapeIcsText(e.title);
     const escapedCategory = escapeIcsText(e.type);
-    const icsReminders = eventReminderRules
-      .map(rule => `BEGIN:VALARM\nACTION:DISPLAY\nDESCRIPTION:${escapedSummary}\nTRIGGER:${rule.trigger}${rule.time ? `\nX-REMINDER-TIME:${rule.time}` : ''}\nEND:VALARM`)
-      .join('\n');
+    const icsReminders = buildIcsReminders(e.title, eventDate, eventReminderRules);
     const reminderSection = icsReminders ? `${icsReminders}\n` : '';
 
     return `BEGIN:VEVENT
@@ -1476,9 +1508,7 @@ ${reminderSection}END:VEVENT`;
         const summary = `${eventTypeLabel} ל${e.title} (${occurrence})`;
         const escapedSummary = escapeIcsText(summary);
         const escapedCategory = escapeIcsText(e.type);
-        const icsReminders = eventReminderRules
-          .map(rule => `BEGIN:VALARM\nACTION:DISPLAY\nDESCRIPTION:${escapedSummary}\nTRIGGER:${rule.trigger}${rule.time ? `\nX-REMINDER-TIME:${rule.time}` : ''}\nEND:VALARM`)
-          .join('\n');
+        const icsReminders = buildIcsReminders(summary, eventDate, eventReminderRules);
         const reminderSection = icsReminders ? `${icsReminders}\n` : '';
 
         eventsForHundredYears.push(`BEGIN:VEVENT
@@ -1489,6 +1519,7 @@ DTEND;VALUE=DATE:${dtEnd}
 SUMMARY:${escapedSummary}
 CATEGORIES:${escapedCategory}
 X-HC4GC-ENTRY-TYPE:GENERATED
+      TRANSP:TRANSPARENT
 ${reminderSection}END:VEVENT`);
       } catch {
         // Skip invalid dates in years where the Hebrew date does not exist.
