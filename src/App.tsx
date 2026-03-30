@@ -161,14 +161,14 @@ const buildReminderRules = (mode: ReminderMode): ReminderRule[] => {
 };
 
 const getEventTypeLabel = (type: string) => {
-  if (type === 'yahrzeit') return 'אזכרות';
+  if (type === 'yahrzeit') return 'ימי זיכרון';
   if (type === 'birthday') return 'ימי הולדת';
   if (type === 'anniversary') return 'ימי נישואין';
   return type;
 };
 
 const getEventTypeSyncLabel = (type: string) => {
-  if (type === 'yahrzeit') return 'אזכרה';
+  if (type === 'yahrzeit') return 'יום זיכרון';
   if (type === 'birthday') return 'יום הולדת';
   if (type === 'anniversary') return 'יום נישואין';
   return type;
@@ -517,7 +517,7 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
               onClick={() => setFilterType(t)}
               className={cn("px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors", filterType === t ? "bg-blue-100 text-blue-800" : "bg-slate-200 text-slate-700 hover:bg-slate-300")}
             >
-              {t === 'yahrzeit' ? 'אזכרות' : t === 'birthday' ? 'ימי הולדת' : t === 'anniversary' ? 'ימי נישואין' : t}
+              {t === 'yahrzeit' ? 'ימי זיכרון' : t === 'birthday' ? 'ימי הולדת' : t === 'anniversary' ? 'ימי נישואין' : t}
             </button>
           ))}
         </div>
@@ -525,7 +525,7 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
 
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-12 lg:col-span-8 space-y-6">
-          <h3 className="text-xs uppercase tracking-[0.15em] text-slate-500 font-bold">אזכרות ושמחות קרובות</h3>
+          <h3 className="text-xs uppercase tracking-[0.15em] text-slate-500 font-bold">אירועים</h3>
           <div className="space-y-4">
             {upcomingEvents.length === 0 ? (
               <div className="p-12 text-center bg-white rounded-xl border border-dashed border-slate-300 text-slate-400">
@@ -551,7 +551,7 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
                     event.type === 'yahrzeit' ? "bg-purple-100 text-purple-800" : 
                     event.type === 'birthday' ? "bg-orange-100 text-orange-800" : "bg-blue-100 text-blue-800"
                   )}>
-                    <span className="text-[10px] font-bold leading-none">{event.type === 'yahrzeit' ? 'אזכרה' : event.type === 'birthday' ? 'יום הולדת' : event.type === 'anniversary' ? 'יום נישואין' : event.type}</span>
+                    <span className="text-[10px] font-bold leading-none">{event.type === 'yahrzeit' ? 'יום זיכרון' : event.type === 'birthday' ? 'יום הולדת' : event.type === 'anniversary' ? 'יום נישואין' : event.type}</span>
                     <span className="text-[10px] font-semibold mt-1 leading-none">{monthLabel}</span>
                     <span className="text-2xl font-extrabold mt-1 leading-none">{gematriya(event.nextOccur.getDate()) || event.hebrewDate.day}</span>
                   </div>
@@ -563,7 +563,7 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
                           event.type === 'yahrzeit' ? "bg-purple-200 text-purple-900" : 
                           event.type === 'birthday' ? "bg-orange-200 text-orange-900" : "bg-blue-200 text-blue-900"
                         )}>
-                          {event.type === 'yahrzeit' ? 'אזכרה' : event.type === 'birthday' ? 'יום הולדת' : event.type === 'anniversary' ? 'יום נישואין' : event.type}
+                          {event.type === 'yahrzeit' ? 'יום זיכרון' : event.type === 'birthday' ? 'יום הולדת' : event.type === 'anniversary' ? 'יום נישואין' : event.type}
                         </span>
                         {hasReminderOverride && (
                           <span
@@ -813,7 +813,7 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
                 {[
                   { id: 'birthday', label: 'יום הולדת', icon: Cake },
                   { id: 'anniversary', label: 'יום נישואין', icon: Heart },
-                  { id: 'yahrzeit', label: 'אזכרה', icon: Flame },
+                  { id: 'yahrzeit', label: 'יום זיכרון', icon: Flame },
                   ...uniqueCustomTypes.map(t => ({ id: t, label: t, icon: Star })),
                   { id: 'other', label: 'אחר...', icon: PlusCircle }
                 ].map((type) => (
@@ -1189,7 +1189,7 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
             {[
               { type: 'holiday', color: 'bg-blue-600', label: 'חגים ומועדים' },
               { type: 'birthday', color: 'bg-blue-300', label: 'ימי הולדת' },
-              { type: 'yahrzeit', color: 'bg-red-600', label: 'אזכרות' },
+              { type: 'yahrzeit', color: 'bg-red-600', label: 'ימי זיכרון' },
               { type: 'anniversary', color: 'bg-purple-300', label: 'ימי נישואין' },
               ...uniqueTypes.filter(t => !['birthday', 'yahrzeit', 'anniversary'].includes(t)).map(t => ({
                 type: t, color: 'bg-purple-300', label: t
