@@ -578,6 +578,20 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
                       <span className="text-xs text-slate-500 font-medium">{gematriya(event.nextOccur.getDate())} {monthLabel} {gematriya(event.nextOccur.getFullYear() % 1000)}</span>
                     </div>
                     <h4 className="text-lg font-bold text-slate-900">{event.title}</h4>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-slate-500" dir="rtl">
+                      {event.hebrewDate.year > 0 && (
+                        <span className="flex items-center gap-1">
+                          <span className="font-semibold text-slate-400">תאריך מקורי:</span>
+                          {gematriya(event.hebrewDate.day)} {event.hebrewDate.month} {gematriya(event.hebrewDate.year % 1000)}
+                        </span>
+                      )}
+                      {event.hebrewDate.year > 0 && event.nextOccur.getFullYear() - event.hebrewDate.year > 0 && (
+                        <span className="flex items-center gap-1">
+                          <span className="font-semibold text-slate-400">מופע:</span>
+                          {event.nextOccur.getFullYear() - event.hebrewDate.year}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="shrink-0 relative">
                     <button 
