@@ -10,6 +10,10 @@
   body {
     @apply font-sans;
   }
+  /* Hide the static crawler footer once the app shell is rendered */
+  #root:not(:empty) ~ #static-privacy-footer {
+    display: none;
+  }
 }
 
 /* Custom scrollbar hiding */

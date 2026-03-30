@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy – HC4GC</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      line-height: 1.7;
+      padding: 2rem 1rem;
+    }
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 2.5rem 2rem;
+    }
+    header {
+      margin-bottom: 2rem;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 1.5rem;
+    }
+    header h1 { font-size: 1.75rem; font-weight: 700; color: #1e293b; }
+    header p { margin-top: .4rem; color: #64748b; font-size: .9rem; }
+    h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 1.75rem 0 .5rem;
+    }
+    p { color: #475569; margin-bottom: .5rem; }
+    ol { color: #475569; padding-left: 1.5rem; margin-bottom: .5rem; }
+    ol li { margin-bottom: .25rem; }
+    a { color: #2563eb; }
+    a:hover { color: #1d4ed8; }
+    code {
+      background: #f1f5f9;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: .85em;
+    }
+    .back-link {
+      display: inline-block;
+      margin-top: 2rem;
+      font-size: .875rem;
+      color: #2563eb;
+      text-decoration: none;
+    }
+    .back-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>HC4GC Privacy Policy</h1>
+      <p>Effective date: March 30, 2026</p>
+    </header>
+
+    <p>This privacy policy explains how HC4GC handles data when you use the app.</p>
+
+    <h2>1. What the app does</h2>
+    <p>HC4GC helps you manage Hebrew calendar events and export/sync them to Google Calendar.</p>
+
+    <h2>2. Data collected</h2>
+    <p>HC4GC does not operate a backend server for storing your personal event data.</p>
+    <p>The app may process the following data in your browser:</p>
+    <ol>
+      <li>Event information you enter (for example: title, event type, Hebrew date, reminder settings).</li>
+      <li>App settings (for example: export preferences).</li>
+      <li>Temporary Google OAuth access token during a sync session.</li>
+    </ol>
+
+    <h2>3. Where data is stored</h2>
+    <ol>
+      <li>Your event data and settings are stored locally in your browser (Local Storage).</li>
+      <li>Data stays on your device/browser unless you choose to export/sync.</li>
+      <li>If you clear browser storage, local app data may be deleted.</li>
+    </ol>
+
+    <h2>4. Google Calendar access</h2>
+    <p>If you use automatic Google sync, HC4GC requests Google OAuth permission to manage calendars/events in your Google account.</p>
+    <ol>
+      <li>OAuth scope used: <code>https://www.googleapis.com/auth/calendar</code></li>
+      <li>Access is used only to perform actions you request (such as calendar creation and event import).</li>
+      <li>OAuth Client Secret and service-account private keys are not used in this frontend app.</li>
+    </ol>
+
+    <h2>5. Export and manual import</h2>
+    <ol>
+      <li>You can export events to an ICS file.</li>
+      <li>You can manually import the ICS file into Google Calendar.</li>
+      <li>Exported files are handled by your browser/device and any services you upload them to.</li>
+    </ol>
+
+    <h2>6. Existing calendar warning</h2>
+    <p>When using auto sync with a calendar name that already exists in your Google account, the app warns you before deletion/recreation of that calendar. You are responsible for confirming this action.</p>
+
+    <h2>7. Third-party services</h2>
+    <p>HC4GC may interact with third-party services only when you explicitly choose features that require them, such as:</p>
+    <ol>
+      <li>Google Calendar API</li>
+      <li>Google OAuth</li>
+    </ol>
+    <p>Use of those services is also subject to their own terms and privacy policies.</p>
+
+    <h2>8. Children and sensitive data</h2>
+    <p>Do not store highly sensitive personal information in event titles/descriptions. The app is intended for general calendar/life-cycle event management.</p>
+
+    <h2>9. Your controls and choices</h2>
+    <p>You can:</p>
+    <ol>
+      <li>Edit or delete events in the app.</li>
+      <li>Clear browser local storage.</li>
+      <li>Avoid Google sync and use only local/export workflows.</li>
+    </ol>
+
+    <h2>10. Security notice</h2>
+    <p>No method of electronic storage/transmission is 100% secure. Keep your device and browser secure, and review data before syncing.</p>
+
+    <h2>11. Changes to this policy</h2>
+    <p>This policy may be updated from time to time. The effective date above reflects the latest version.</p>
+
+    <h2>12. Contact and support</h2>
+    <p>For privacy questions, bug reports, or support requests, open an issue:</p>
+    <p><a href="https://github.com/achiyae/HebrewCalendar/issues">github.com/achiyae/HebrewCalendar/issues</a></p>
+
+    <a class="back-link" href="../">&larr; Back to HC4GC</a>
+  </div>
+</body>
+</html>
