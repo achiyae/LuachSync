@@ -29,7 +29,8 @@ import {
   BookOpen,
   Sparkles,
   Check,
-  Plus
+  Plus,
+  Shield
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { HDate, Zmanim, Location, HebrewCalendar, getSedra, gematriya, gematriyaStrToNum, flags } from '@hebcal/core';
@@ -38,6 +39,7 @@ import { he } from 'date-fns/locale';
 import { cn } from './lib/utils';
 import { CalendarEvent, EventType, ReminderMode } from './types';
 import HelpSupportView from './components/HelpSupportView';
+import PrivacyView from './components/PrivacyView';
 
 type GoogleTokenResponse = {
   access_token?: string;
@@ -301,6 +303,23 @@ const Sidebar = ({ activeTab, setActiveTab, isCollapsed, onToggleCollapse, isMob
         >
           <HelpCircle size={18} />
           {!isCollapsed && <span className="text-sm tracking-wide">תמיכה</span>}
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('privacy');
+            onCloseMobileMenu();
+          }}
+          title="מדיניות פרטיות"
+          className={cn(
+            "flex items-center px-3 py-2 rounded-lg transition-all text-right w-full",
+            isCollapsed ? "justify-center" : "gap-3",
+            activeTab === 'privacy'
+              ? "bg-white text-blue-700 font-bold shadow-sm"
+              : "text-slate-600 hover:text-blue-600 hover:bg-slate-200"
+          )}
+        >
+          <Shield size={18} />
+          {!isCollapsed && <span className="text-sm tracking-wide">מדיניות פרטיות</span>}
         </button>
       </div>
     </aside>
@@ -2374,7 +2393,18 @@ END:VCALENDAR`;
 export default function App() {
   const APP_STORAGE_KEY = 'hc4gc.appState.v1';
   const LEGACY_EVENTS_STORAGE_KEY = 'hc4gc.events.v1';
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const getInitialTab = () => {
+    const path = window.location.pathname;
+    if (path.endsWith('/privacy') || path.endsWith('/privacy/')) return 'privacy';
+    return 'dashboard';
+  };
+  const [activeTab, setActiveTab] = useState(getInitialTab);
+  const navigateTo = (tab: string) => {
+    setActiveTab(tab);
+    const base = window.location.pathname.replace(/\/(privacy)\/?$/, '').replace(/\/$/, '');
+    const newPath = tab === 'privacy' ? base + '/privacy' : base + '/';
+    window.history.pushState(null, '', newPath);
+  };
   const [appState, setAppState] = useState<PersistedAppState>(() => {
     try {
       const raw = window.localStorage.getItem(APP_STORAGE_KEY);
@@ -2428,6 +2458,15 @@ export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
+    const onPopState = () => {
+      const path = window.location.pathname;
+      setActiveTab(path.endsWith('/privacy') || path.endsWith('/privacy/') ? 'privacy' : 'dashboard');
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
     try {
       window.localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(appState));
     } catch {
@@ -2449,12 +2488,12 @@ export default function App() {
     } else {
       setEvents([...events, newEvent]);
     }
-    setActiveTab('dashboard');
+    navigateTo('dashboard');
   };
 
   const handleEdit = (evt: CalendarEvent) => {
     setEditingEvent(evt);
-    setActiveTab('add-event');
+    navigateTo('add-event');
   };
 
   const handleDelete = (id: string) => {
@@ -2471,7 +2510,7 @@ export default function App() {
     if (window.confirm('למחוק את כל האירועים מהרשימה?')) {
       setEvents([]);
       setEditingEvent(null);
-      setActiveTab('dashboard');
+      navigateTo('dashboard');
     }
   };
 
@@ -2490,7 +2529,7 @@ export default function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardView events={events} onAddClick={() => setActiveTab('add-event')} onEdit={handleEdit} onDelete={handleDelete} onClearAll={handleClearAll} />;
+        return <DashboardView events={events} onAddClick={() => navigateTo('add-event')} onEdit={handleEdit} onDelete={handleDelete} onClearAll={handleClearAll} />;
       case 'calendar':
         return <CalendarView events={events} />;
       case 'add-event':
@@ -2500,15 +2539,17 @@ export default function App() {
                  onSave={handleSaveEvent} 
                  onCancel={() => {
                    setEditingEvent(null);
-                   setActiveTab('dashboard');
+                   navigateTo('dashboard');
                  }} 
                />;
       case 'import-export':
         return <ImportExportView events={events} onImport={handleImportEvents} exportSettings={exportSettings} onExportSettingsChange={setExportSettings} />;
       case 'support':
         return <HelpSupportView />;
+      case 'privacy':
+        return <PrivacyView />;
       default:
-        return <DashboardView events={events} onAddClick={() => setActiveTab('add-event')} onEdit={handleEdit} onDelete={handleDelete} onClearAll={handleClearAll} />;
+        return <DashboardView events={events} onAddClick={() => navigateTo('add-event')} onEdit={handleEdit} onDelete={handleDelete} onClearAll={handleClearAll} />;
     }
   };
 
@@ -2519,6 +2560,7 @@ export default function App() {
       case 'add-event': return 'הוספת אירוע';
       case 'import-export': return 'ייצוא וייבוא';
       case 'support': return 'תמיכה ועזרה';
+      case 'privacy': return 'מדיניות פרטיות';
       default: return 'HC4GC';
     }
   };
@@ -2535,7 +2577,7 @@ export default function App() {
 
       <Sidebar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={navigateTo}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
         isMobileMenuOpen={isMobileMenuOpen}
@@ -2550,7 +2592,7 @@ export default function App() {
           title={getTitle()}
           onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
           onOpenSupport={() => {
-            setActiveTab('support');
+            navigateTo('support');
             setIsMobileMenuOpen(false);
           }}
         />
