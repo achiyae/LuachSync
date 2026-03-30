@@ -53,6 +53,7 @@ type GoogleSyncEvent = {
   type: string;
   eventDate: Date;
   reminders: Array<{ method: 'popup'; minutes: number }>;
+  iCalUID: string;
 };
 
 type GoogleCalendarListEntry = {
@@ -65,11 +66,6 @@ type GoogleCalendarListResponse = {
   nextPageToken?: string;
 };
 
-type GoogleCalendarEventsListResponse = {
-  items?: Array<{ id?: string }>;
-  nextPageToken?: string;
-};
-
 type GoogleSyncSummary = {
   calendarId: string;
   calendarName: string;
@@ -78,7 +74,12 @@ type GoogleSyncSummary = {
   deleteFailed: number;
   inserted: number;
   failed: number;
+  firstInsertError?: string;
+  firstDeleteError?: string;
+  firstInsertPayload?: string;
 };
+
+const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
 declare global {
   interface Window {
@@ -1493,6 +1494,8 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
     return `${y}${m}${d}`;
   };
 
+  const formatGoogleAllDayDate = (date: Date) => format(date, 'yyyy-MM-dd');
+
   const formatIcsUtcDateTime = (date: Date) => {
     const y = date.getUTCFullYear();
     const m = `${date.getUTCMonth() + 1}`.padStart(2, '0');
@@ -1582,6 +1585,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
       const reminders = buildGoogleReminderOverrides(eventReminderRules);
       const month = hebrewToEnglishMonth[event.hebrewDate.month] || 'Nisan';
       const eventTypeLabel = getEventTypeSyncLabel(event.type);
+      const exportBaseId = normalizeExportBaseId(event.id);
 
       for (let i = 0; i < 100; i++) {
         const targetHebrewYear = event.hebrewDate.year + i;
@@ -1591,7 +1595,8 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
             summary: `${eventTypeLabel} ל${event.title} (${i})`,
             type: event.type,
             eventDate: hd.greg(),
-            reminders
+            reminders,
+            iCalUID: `${exportBaseId}-${targetHebrewYear}-${i}@hc4gc-import`
           });
         } catch {
           // Skip years where this Hebrew date does not exist.
@@ -1736,40 +1741,75 @@ END:VCALENDAR`;
     });
   };
 
-  const callGoogleCalendarApi = async <T,>(accessToken: string, url: string, init?: RequestInit): Promise<T> => {
-    const response = await fetch(url, {
-      ...init,
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        ...(init?.headers || {})
+  const callGoogleCalendarApi = async <T,>(
+    accessToken: string,
+    url: string,
+    init?: RequestInit,
+    timeoutMs = 20000,
+    maxRetries = 6
+  ): Promise<T> => {
+    const isRetryable = (status: number, errorText: string) => {
+      if (status === 429 || status >= 500) {
+        return true;
       }
-    });
+      if (status === 403 && /rateLimitExceeded|userRateLimitExceeded|quotaExceeded/i.test(errorText)) {
+        return true;
+      }
+      return false;
+    };
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || 'Google Calendar API request failed.');
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+      try {
+        const response = await fetch(url, {
+          ...init,
+          signal: controller.signal,
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            ...(init?.headers || {})
+          }
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          if (attempt < maxRetries && isRetryable(response.status, errorText)) {
+            const backoffMs = Math.min(8000, 350 * Math.pow(2, attempt)) + Math.floor(Math.random() * 250);
+            await sleep(backoffMs);
+            continue;
+          }
+          throw new Error(errorText || `Google Calendar API request failed for ${url}`);
+        }
+
+        if (response.status === 204) {
+          return undefined as T;
+        }
+
+        const responseText = await response.text();
+        if (!responseText.trim()) {
+          return undefined as T;
+        }
+
+        return JSON.parse(responseText) as T;
+      } catch (error) {
+        const isAbort = error instanceof DOMException && error.name === 'AbortError';
+        if (attempt < maxRetries && isAbort) {
+          const backoffMs = Math.min(8000, 350 * Math.pow(2, attempt)) + Math.floor(Math.random() * 250);
+          await sleep(backoffMs);
+          continue;
+        }
+        throw error;
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
     }
 
-    return response.json() as Promise<T>;
+    throw new Error(`Google Calendar API retries exhausted for ${url}`);
   };
 
-  const runWithConcurrency = async <T,>(
-    items: T[],
-    concurrency: number,
-    worker: (item: T, index: number) => Promise<void>
-  ) => {
-    let index = 0;
-    const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
-      while (index < items.length) {
-        const current = index;
-        index += 1;
-        await worker(items[current], current);
-      }
-    });
-
-    await Promise.all(workers);
-  };
+  const isRateLimitErrorMessage = (message: string) => /rateLimitExceeded|userRateLimitExceeded|quotaExceeded|429/i.test(message);
 
   const findOwnedCalendarByName = async (accessToken: string, calendarName: string) => {
     let pageToken: string | undefined;
@@ -1801,44 +1841,21 @@ END:VCALENDAR`;
     return null;
   };
 
-  const clearCalendarEvents = async (accessToken: string, calendarId: string) => {
-    let pageToken: string | undefined;
-    let deleted = 0;
-    let deleteFailed = 0;
-
-    do {
-      const searchParams = new URLSearchParams({
-        showDeleted: 'false',
-        maxResults: '250'
-      });
-      if (pageToken) {
-        searchParams.set('pageToken', pageToken);
-      }
-
-      const listResp = await callGoogleCalendarApi<GoogleCalendarEventsListResponse>(
+  const deleteCalendarIfExists = async (accessToken: string, calendarId: string) => {
+    try {
+      await callGoogleCalendarApi(
         accessToken,
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${searchParams.toString()}`
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}`,
+        { method: 'DELETE' }
       );
-
-      const eventIds = (listResp.items || []).map((item) => item.id).filter((id): id is string => !!id);
-
-      await runWithConcurrency<string>(eventIds, 8, async (eventId) => {
-        try {
-          await callGoogleCalendarApi(
-            accessToken,
-            `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
-            { method: 'DELETE' }
-          );
-          deleted += 1;
-        } catch {
-          deleteFailed += 1;
-        }
-      });
-
-      pageToken = listResp.nextPageToken;
-    } while (pageToken);
-
-    return { deleted, deleteFailed };
+      return { deleted: 1, deleteFailed: 0, firstDeleteError: '' };
+    } catch (error) {
+      return {
+        deleted: 0,
+        deleteFailed: 1,
+        firstDeleteError: error instanceof Error ? error.message : 'Calendar delete request failed.'
+      };
+    }
   };
 
   const handleGoogleCalendarSync = async () => {
@@ -1875,21 +1892,42 @@ END:VCALENDAR`;
       let usedExistingCalendar = false;
       let deleted = 0;
       let deleteFailed = 0;
+      let firstDeleteError = '';
 
       if (existingCalendar) {
-        const shouldOverwrite = window.confirm(`נמצא כבר יומן בשם "${normalizedCalendarName}". כל האירועים הקיימים בו יימחקו לפני סנכרון. להמשיך?`);
+        const shouldOverwrite = window.confirm(`נמצא כבר יומן בשם "${normalizedCalendarName}". היומן הקיים יימחק לחלוטין ויווצר מחדש לפני הסנכרון. להמשיך?`);
         if (!shouldOverwrite) {
           return;
         }
 
         usedExistingCalendar = true;
-        calendarId = existingCalendar.id;
         calendarName = existingCalendar.summary || normalizedCalendarName;
 
-        setGoogleSyncStatus('מוחק את כל האירועים הקיימים ביומן...');
-        const clearResult = await clearCalendarEvents(accessToken, calendarId);
+        setGoogleSyncStatus('מוחק את היומן הקיים...');
+        const clearResult = await deleteCalendarIfExists(accessToken, existingCalendar.id);
         deleted = clearResult.deleted;
         deleteFailed = clearResult.deleteFailed;
+        firstDeleteError = clearResult.firstDeleteError;
+
+        if (clearResult.deleteFailed > 0) {
+          throw new Error(clearResult.firstDeleteError || 'Failed to delete existing calendar.');
+        }
+
+        setGoogleSyncStatus('יוצר יומן חדש עם אותו שם...');
+        const recreatedCalendar = await callGoogleCalendarApi<{ id: string; summary?: string }>(
+          accessToken,
+          'https://www.googleapis.com/calendar/v3/calendars',
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              summary: normalizedCalendarName,
+              description: 'Created by HC4GC sync flow',
+              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            })
+          }
+        );
+        calendarId = recreatedCalendar.id;
+        calendarName = recreatedCalendar.summary || normalizedCalendarName;
       } else {
         setGoogleSyncStatus('יוצר יומן חדש...');
         const createdCalendar = await callGoogleCalendarApi<{ id: string; summary?: string }>(
@@ -1910,46 +1948,97 @@ END:VCALENDAR`;
 
       let inserted = 0;
       let failed = 0;
+      let firstInsertError = '';
+      let firstInsertPayload = '';
       const total = syncEventsForGoogle.length;
-      setGoogleSyncStatus(`מעלה אירועים ליומן "${calendarName}"... 0/${total}`);
+      const minConcurrency = 1;
+      const maxConcurrency = 16;
+      let adaptiveConcurrency = 3;
+      let pointer = 0;
 
-      await runWithConcurrency<GoogleSyncEvent>(syncEventsForGoogle, 6, async (syncEvent) => {
-        const startDate = formatIcsDate(syncEvent.eventDate);
-        const endDate = formatIcsDate(addDays(syncEvent.eventDate, 1));
+      while (pointer < total) {
+        const remaining = total - pointer;
+        const batchSize = Math.min(remaining, adaptiveConcurrency * 8);
+        const batch = syncEventsForGoogle.slice(pointer, pointer + batchSize);
+        const batchStart = pointer + 1;
+        const batchEnd = pointer + batch.length;
 
-        try {
-          await callGoogleCalendarApi(
-            accessToken,
-            `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
-            {
-              method: 'POST',
-              body: JSON.stringify({
-                summary: syncEvent.summary,
-                start: { date: startDate },
-                end: { date: endDate },
-                transparency: 'transparent',
-                reminders: {
-                  useDefault: false,
-                  overrides: syncEvent.reminders
-                },
-                extendedProperties: {
-                  private: {
-                    hc4gcType: syncEvent.type
-                  }
+        setGoogleSyncStatus(`מעלה אירועים ליומן "${calendarName}"... ${pointer}/${total} (batch ${batchStart}-${batchEnd}, concurrency ${adaptiveConcurrency})`);
+
+        const results = await Promise.all(batch.map(async (syncEvent) => {
+          const startDate = formatGoogleAllDayDate(syncEvent.eventDate);
+          const endDate = formatGoogleAllDayDate(addDays(syncEvent.eventDate, 1));
+          const basePayload: Record<string, unknown> = {
+            summary: syncEvent.summary,
+            start: { date: startDate },
+            end: { date: endDate }
+          };
+
+          const fullPayload: Record<string, unknown> = {
+            ...basePayload,
+            iCalUID: syncEvent.iCalUID,
+            ...(syncEvent.reminders.length > 0 ? { reminders: { useDefault: false, overrides: syncEvent.reminders } } : {})
+          };
+
+          const fallbackPayload: Record<string, unknown> = {
+            ...basePayload,
+            iCalUID: syncEvent.iCalUID
+          };
+
+          try {
+            await callGoogleCalendarApi(
+              accessToken,
+              `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/import`,
+              {
+                method: 'POST',
+                body: JSON.stringify(fullPayload)
+              }
+            );
+            return { ok: true as const };
+          } catch {
+            try {
+              await callGoogleCalendarApi(
+                accessToken,
+                `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/import`,
+                {
+                  method: 'POST',
+                  body: JSON.stringify(fallbackPayload)
                 }
-              })
+              );
+              return { ok: true as const };
+            } catch (retryError) {
+              const message = retryError instanceof Error ? retryError.message : 'Insert request failed.';
+              return {
+                ok: false as const,
+                rateLimited: isRateLimitErrorMessage(message),
+                message,
+                payload: JSON.stringify({ fullPayload, fallbackPayload }, null, 2)
+              };
             }
-          );
-          inserted += 1;
-        } catch {
-          failed += 1;
+          }
+        }));
+
+        const batchFailures = results.filter((result) => !result.ok);
+        const batchRateLimited = batchFailures.filter((result) => result.rateLimited).length;
+
+        inserted += results.length - batchFailures.length;
+        failed += batchFailures.length;
+
+        if (!firstInsertError && batchFailures.length > 0) {
+          firstInsertError = batchFailures[0].message;
+          firstInsertPayload = batchFailures[0].payload;
         }
 
-        const processed = inserted + failed;
-        if (processed % 25 === 0 || processed === total) {
-          setGoogleSyncStatus(`מעלה אירועים ליומן "${calendarName}"... ${processed}/${total}`);
+        pointer += batch.length;
+        setGoogleSyncStatus(`מעלה אירועים ליומן "${calendarName}"... ${pointer}/${total} (concurrency ${adaptiveConcurrency})`);
+
+        if (batchRateLimited > 0) {
+          adaptiveConcurrency = Math.max(minConcurrency, adaptiveConcurrency - 1);
+          await sleep(600 + batchRateLimited * 250);
+        } else if (batchFailures.length === 0 && adaptiveConcurrency < maxConcurrency) {
+          adaptiveConcurrency += 1;
         }
-      });
+      }
 
       setGoogleSyncStatus('הסנכרון הושלם. מכין סיכום...');
       setGoogleSyncSummary({
@@ -1959,7 +2048,10 @@ END:VCALENDAR`;
         deleted,
         deleteFailed,
         inserted,
-        failed
+        failed,
+        firstInsertError,
+        firstDeleteError,
+        firstInsertPayload
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'שגיאה לא צפויה בסנכרון.';
@@ -1967,6 +2059,7 @@ END:VCALENDAR`;
     } finally {
       setIsGoogleSyncing(false);
       setGoogleSyncStatus('');
+      googleTokenClientRef.current = null;
     }
   };
 
@@ -2077,7 +2170,7 @@ END:VCALENDAR`;
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-sm text-right focus:ring-2 focus:ring-blue-500/20"
                 placeholder="למשל: HebrewCalendar משפחה"
               />
-              <p className="mt-2 text-[10px] text-slate-500 leading-relaxed">אם יומן בשם הזה כבר קיים בחשבון שלך, תוצג אזהרה וכל האירועים הקיימים בו יימחקו לפני הסנכרון.</p>
+              <p className="mt-2 text-[10px] text-slate-500 leading-relaxed">אם יומן בשם הזה כבר קיים בחשבון שלך, תוצג אזהרה והיומן יימחק לחלוטין ויווצר מחדש לפני הסנכרון.</p>
             </div>
             <button onClick={handleDownload} className="w-full bg-gradient-to-r from-blue-600 to-blue-800 p-4 rounded-xl text-white font-bold flex items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-all group">
                <Download className="group-hover:translate-y-1 transition-transform" size={20} />
@@ -2119,7 +2212,7 @@ END:VCALENDAR`;
              <Info className="text-blue-600 shrink-0" size={20} />
              <p className="text-xs text-slate-600 leading-relaxed">
               <strong className="text-slate-900 block mb-1">הערת מפתח</strong>
-               כפתור הסנכרון האוטומטי מסנכרן לפי שם היומן שתגדיר. אם היומן כבר קיים - תוצג אזהרה, וכל האירועים הקיימים בו יימחקו לפני העלאה מחדש.
+               כפתור הסנכרון האוטומטי מסנכרן לפי שם היומן שתגדיר. אם היומן כבר קיים - תוצג אזהרה, היומן יימחק ויווצר מחדש, ואז יתבצע ייבוא דרך Google Calendar API.
              </p>
            </div>
          </div>
@@ -2160,12 +2253,33 @@ END:VCALENDAR`;
               </div>
 
               <div className="space-y-2 text-sm text-slate-700">
-                <div className="flex justify-between"><span>מצב יומן</span><span className="font-bold">{googleSyncSummary.usedExistingCalendar ? 'יומן קיים (נוקה)' : 'יומן חדש'}</span></div>
+                <div className="flex justify-between"><span>מצב יומן</span><span className="font-bold">{googleSyncSummary.usedExistingCalendar ? 'יומן קיים (נמחק ונוצר מחדש)' : 'יומן חדש'}</span></div>
                 <div className="flex justify-between"><span>אירועים שהוזנו</span><span className="font-bold text-blue-700">{googleSyncSummary.inserted}</span></div>
                 <div className="flex justify-between"><span>אירועים שנכשלו בהזנה</span><span className="font-bold text-amber-700">{googleSyncSummary.failed}</span></div>
-                <div className="flex justify-between"><span>אירועים שנמחקו לפני הסנכרון</span><span className="font-bold">{googleSyncSummary.deleted}</span></div>
-                <div className="flex justify-between"><span>כשלים במחיקה</span><span className="font-bold text-amber-700">{googleSyncSummary.deleteFailed}</span></div>
+                <div className="flex justify-between"><span>יומנים שנמחקו לפני הסנכרון</span><span className="font-bold">{googleSyncSummary.deleted}</span></div>
+                <div className="flex justify-between"><span>כשלים במחיקת יומן</span><span className="font-bold text-amber-700">{googleSyncSummary.deleteFailed}</span></div>
               </div>
+
+              {googleSyncSummary.firstInsertError && (
+                <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900 leading-relaxed break-words">
+                  <strong className="font-bold block mb-1">שגיאת ההזנה הראשונה</strong>
+                  {googleSyncSummary.firstInsertError}
+                </div>
+              )}
+
+              {googleSyncSummary.firstInsertPayload && (
+                <div className="mt-3 rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 text-xs text-slate-700 leading-relaxed break-words">
+                  <strong className="font-bold block mb-1">Payload של ניסיון ההזנה הראשון</strong>
+                  <pre className="whitespace-pre-wrap text-[11px]">{googleSyncSummary.firstInsertPayload}</pre>
+                </div>
+              )}
+
+              {googleSyncSummary.firstDeleteError && (
+                <div className="mt-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900 leading-relaxed break-words">
+                  <strong className="font-bold block mb-1">שגיאת המחיקה הראשונה</strong>
+                  {googleSyncSummary.firstDeleteError}
+                </div>
+              )}
 
               <div className="mt-5 flex gap-2">
                 <button
