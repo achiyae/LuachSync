@@ -100,15 +100,15 @@ declare global {
 
 // --- Helpers ---
 const hebrewMonthsMap: Record<string, string> = {
-    'Nisan': 'Χ Χ™Χ΅Χ', 'Iyyar': 'ΧΧ™Χ™Χ¨', 'Sivan': 'Χ΅Χ™Χ•Χ•Χ', 'Tamuz': 'ΧªΧΧ•Χ–', 'Av': 'ΧΧ‘', 'Elul': 'ΧΧΧ•Χ',
-    'Tishrei': 'ΧªΧ©Χ¨Χ™', 'Cheshvan': 'Χ—Χ©Χ•Χ•Χ', 'Heshvan': 'Χ—Χ©Χ•Χ•Χ', 'Kislev': 'Χ›Χ΅ΧΧ•', 'Tevet': 'ΧΧ‘Χª', 
-    'Shvat': 'Χ©Χ‘Χ', "Sh'vat": 'Χ©Χ‘Χ', 'Adar 1': 'ΧΧ“Χ¨ ΧΧ³', 'Adar I': 'ΧΧ“Χ¨ ΧΧ³', 'Adar 2': 'ΧΧ“Χ¨ Χ‘Χ³', 'Adar II': 'ΧΧ“Χ¨ Χ‘Χ³', 'Adar': 'ΧΧ“Χ¨'
+    'Nisan': 'πιρο', 'Iyyar': 'ΰιιψ', 'Sivan': 'ριεεο', 'Tamuz': 'ϊξεζ', 'Av': 'ΰα', 'Elul': 'ΰμεμ',
+    'Tishrei': 'ϊωψι', 'Cheshvan': 'ηωεεο', 'Heshvan': 'ηωεεο', 'Kislev': 'λρμε', 'Tevet': 'θαϊ', 
+    'Shvat': 'ωαθ', "Sh'vat": 'ωαθ', 'Adar 1': 'ΰγψ ΰΧ', 'Adar I': 'ΰγψ ΰΧ', 'Adar 2': 'ΰγψ αΧ', 'Adar II': 'ΰγψ αΧ', 'Adar': 'ΰγψ'
 };
 
 const hebrewMonthsRev: Record<string, string> = {
-  'Nisan': 'Χ Χ™Χ΅Χ', 'Iyyar': 'ΧΧ™Χ™Χ¨', 'Sivan': 'Χ΅Χ™Χ•Χ•Χ', 'Tamuz': 'ΧªΧΧ•Χ–', 'Av': 'ΧΧ‘', 'Elul': 'ΧΧΧ•Χ',
-  'Tishrei': 'ΧªΧ©Χ¨Χ™', 'Cheshvan': 'Χ—Χ©Χ•Χ•Χ', 'Heshvan': 'Χ—Χ©Χ•Χ•Χ', 'Kislev': 'Χ›Χ΅ΧΧ•', 'Tevet': 'ΧΧ‘Χª',
-  'Shvat': 'Χ©Χ‘Χ', "Sh'vat": 'Χ©Χ‘Χ', 'Adar 1': 'ΧΧ“Χ¨ ΧΧ³', 'Adar I': 'ΧΧ“Χ¨ ΧΧ³', 'Adar 2': 'ΧΧ“Χ¨ Χ‘Χ³', 'Adar II': 'ΧΧ“Χ¨ Χ‘Χ³', 'Adar': 'ΧΧ“Χ¨'
+  'Nisan': 'πιρο', 'Iyyar': 'ΰιιψ', 'Sivan': 'ριεεο', 'Tamuz': 'ϊξεζ', 'Av': 'ΰα', 'Elul': 'ΰμεμ',
+  'Tishrei': 'ϊωψι', 'Cheshvan': 'ηωεεο', 'Heshvan': 'ηωεεο', 'Kislev': 'λρμε', 'Tevet': 'θαϊ',
+  'Shvat': 'ωαθ', "Sh'vat": 'ωαθ', 'Adar 1': 'ΰγψ ΰΧ', 'Adar I': 'ΰγψ ΰΧ', 'Adar 2': 'ΰγψ αΧ', 'Adar II': 'ΰγψ αΧ', 'Adar': 'ΰγψ'
 };
 
 type ReminderRule = { id: string; label: string; trigger: string; time?: string };
@@ -136,23 +136,23 @@ const DEFAULT_EXPORT_SETTINGS: ExportSettingsState = {
 };
 
 const REMINDER_MODE_OPTIONS: Array<{ id: ReminderMode; label: string; desc: string }> = [
-  { id: 'use-export-default', label: 'Χ”Χ©ΧªΧΧ© Χ‘Χ”Χ’Χ“Χ¨Χª Χ”Χ™Χ™Χ¦Χ•Χ', desc: 'Χ”ΧΧ™Χ¨Χ•ΧΆ Χ™Χ©ΧªΧΧ© Χ‘ΧªΧ–Χ›Χ•Χ¨Χ•Χª Χ©ΧªΧ•Χ’Χ“Χ¨Χ Χ” Χ‘ΧΧ΅Χ Χ”Χ™Χ™Χ¦Χ•Χ.' },
-  { id: 'none', label: 'ΧΧΧ ΧªΧ–Χ›Χ•Χ¨Χ•Χª', desc: 'Χ”ΧΧ™Χ¨Χ•ΧΆ Χ”Χ–Χ” Χ™Χ™Χ•Χ¦Χ ΧΧΧ ΧªΧ–Χ›Χ•Χ¨Χ•Χª, Χ’Χ ΧΧ Χ‘Χ™Χ™Χ¦Χ•Χ ΧΧ•Χ’Χ“Χ¨ ΧΧ—Χ¨Χª.' },
-  { id: 'day-before', label: 'Χ™Χ•Χ ΧΧ¤Χ Χ™ Χ‘Χ©ΧΆΧ” 19:00', desc: 'ΧΆΧ•Χ§Χ£ ΧΧª Χ‘Χ¨Χ™Χ¨Χª Χ”ΧΧ—Χ“Χ Χ©Χ Χ”Χ™Χ™Χ¦Χ•Χ ΧΆΧ‘Χ•Χ¨ Χ”ΧΧ™Χ¨Χ•ΧΆ Χ”Χ–Χ” Χ‘ΧΧ‘Χ“.' },
-  { id: 'week-before', label: 'Χ©Χ‘Χ•ΧΆ ΧΧ¤Χ Χ™', desc: 'ΧΆΧ•Χ§Χ£ ΧΧª Χ‘Χ¨Χ™Χ¨Χª Χ”ΧΧ—Χ“Χ Χ©Χ Χ”Χ™Χ™Χ¦Χ•Χ ΧΆΧ‘Χ•Χ¨ Χ”ΧΧ™Χ¨Χ•ΧΆ Χ”Χ–Χ” Χ‘ΧΧ‘Χ“.' },
-  { id: 'both', label: 'Χ’Χ Χ©Χ‘Χ•ΧΆ ΧΧ¤Χ Χ™ Χ•Χ’Χ Χ™Χ•Χ ΧΧ¤Χ Χ™ Χ‘-19:00', desc: 'ΧΆΧ•Χ§Χ£ ΧΧª Χ‘Χ¨Χ™Χ¨Χª Χ”ΧΧ—Χ“Χ Χ©Χ Χ”Χ™Χ™Χ¦Χ•Χ ΧΆΧ‘Χ•Χ¨ Χ”ΧΧ™Χ¨Χ•ΧΆ Χ”Χ–Χ” Χ‘ΧΧ‘Χ“.' }
+  { id: 'use-export-default', label: 'δωϊξω αδβγψϊ διιφεΰ', desc: 'δΰιψες ιωϊξω αϊζλεψεϊ ωϊεβγψπδ αξρκ διιφεΰ.' },
+  { id: 'none', label: 'μμΰ ϊζλεψεϊ', desc: 'δΰιψες δζδ ιιεφΰ μμΰ ϊζλεψεϊ, βν ΰν αιιφεΰ ξεβγψ ΰηψϊ.' },
+  { id: 'day-before', label: 'ιεν μτπι αωςδ 19:00', desc: 'ςεχσ ΰϊ αψιψϊ δξηγμ ωμ διιφεΰ ςαεψ δΰιψες δζδ αμαγ.' },
+  { id: 'week-before', label: 'ωαες μτπι', desc: 'ςεχσ ΰϊ αψιψϊ δξηγμ ωμ διιφεΰ ςαεψ δΰιψες δζδ αμαγ.' },
+  { id: 'both', label: 'βν ωαες μτπι εβν ιεν μτπι α-19:00', desc: 'ςεχσ ΰϊ αψιψϊ δξηγμ ωμ διιφεΰ ςαεψ δΰιψες δζδ αμαγ.' }
 ];
 
 const buildReminderRules = (mode: ReminderMode): ReminderRule[] => {
   switch (mode) {
     case 'day-before':
-      return [{ id: 'day_before_19', label: 'Χ™Χ•Χ ΧΧ¤Χ Χ™ Χ‘Χ©ΧΆΧ” 19:00', trigger: '-P1D', time: '19:00' }];
+      return [{ id: 'day_before_19', label: 'ιεν μτπι αωςδ 19:00', trigger: '-P1D', time: '19:00' }];
     case 'week-before':
-      return [{ id: 'week_before', label: 'Χ©Χ‘Χ•ΧΆ ΧΧ¤Χ Χ™', trigger: '-P7D' }];
+      return [{ id: 'week_before', label: 'ωαες μτπι', trigger: '-P7D' }];
     case 'both':
       return [
-        { id: 'day_before_19', label: 'Χ™Χ•Χ ΧΧ¤Χ Χ™ Χ‘Χ©ΧΆΧ” 19:00', trigger: '-P1D', time: '19:00' },
-        { id: 'week_before', label: 'Χ©Χ‘Χ•ΧΆ ΧΧ¤Χ Χ™', trigger: '-P7D' }
+        { id: 'day_before_19', label: 'ιεν μτπι αωςδ 19:00', trigger: '-P1D', time: '19:00' },
+        { id: 'week_before', label: 'ωαες μτπι', trigger: '-P7D' }
       ];
     default:
       return [];
@@ -160,16 +160,16 @@ const buildReminderRules = (mode: ReminderMode): ReminderRule[] => {
 };
 
 const getEventTypeLabel = (type: string) => {
-  if (type === 'yahrzeit') return 'ΧΧ–Χ›Χ¨Χ•Χª';
-  if (type === 'birthday') return 'Χ™ΧΧ™ Χ”Χ•ΧΧ“Χª';
-  if (type === 'anniversary') return 'Χ™ΧΧ™ Χ Χ™Χ©Χ•ΧΧ™Χ';
+  if (type === 'yahrzeit') return 'ΰζλψεϊ';
+  if (type === 'birthday') return 'ιξι δεμγϊ';
+  if (type === 'anniversary') return 'ιξι πιωεΰιο';
   return type;
 };
 
 const getEventTypeSyncLabel = (type: string) => {
-  if (type === 'yahrzeit') return 'ΧΧ–Χ›Χ¨Χ”';
-  if (type === 'birthday') return 'Χ™Χ•Χ Χ”Χ•ΧΧ“Χª';
-  if (type === 'anniversary') return 'Χ™Χ•Χ Χ Χ™Χ©Χ•ΧΧ™Χ';
+  if (type === 'yahrzeit') return 'ΰζλψδ';
+  if (type === 'birthday') return 'ιεν δεμγϊ';
+  if (type === 'anniversary') return 'ιεν πιωεΰιο';
   return type;
 };
 
@@ -211,10 +211,10 @@ const Sidebar = ({ activeTab, setActiveTab, isCollapsed, onToggleCollapse, isMob
   onCloseMobileMenu: () => void
 }) => {
   const navItems = [
-    { id: 'dashboard', label: 'ΧΧ•Χ— Χ‘Χ§Χ¨Χ”', icon: LayoutDashboard },
-    { id: 'calendar', label: 'ΧΧ•Χ— Χ©Χ Χ”', icon: CalendarIcon },
-    { id: 'add-event', label: 'Χ”Χ•Χ΅Χ¤Χª ΧΧ™Χ¨Χ•ΧΆ', icon: PlusCircle },
-    { id: 'import-export', label: 'Χ™Χ™Χ¦Χ•Χ Χ•Χ™Χ™Χ‘Χ•Χ', icon: ArrowLeftRight },
+    { id: 'dashboard', label: 'μεη αχψδ', icon: LayoutDashboard },
+    { id: 'calendar', label: 'μεη ωπδ', icon: CalendarIcon },
+    { id: 'add-event', label: 'δερτϊ ΰιψες', icon: PlusCircle },
+    { id: 'import-export', label: 'ιιφεΰ ειιαεΰ', icon: ArrowLeftRight },
   ];
 
   return (
@@ -232,7 +232,7 @@ const Sidebar = ({ activeTab, setActiveTab, isCollapsed, onToggleCollapse, isMob
               </div>
               <div>
                 <h2 className="font-bold text-blue-900 leading-tight">HC4GC</h2>
-                <p className="text-[10px] uppercase tracking-widest text-slate-500 opacity-70">ΧΧΆΧ¨Χ›Χª ΧΧ•Χ— Χ©Χ Χ” ΧΆΧ‘Χ¨Χ™</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500 opacity-70">ξςψλϊ μεη ωπδ ςαψι</p>
               </div>
             </div>
           )}
@@ -243,16 +243,16 @@ const Sidebar = ({ activeTab, setActiveTab, isCollapsed, onToggleCollapse, isMob
           )}
           <button
             onClick={onToggleCollapse}
-            title={isCollapsed ? 'Χ”Χ¨Χ—Χ‘ ΧªΧ¤Χ¨Χ™Χ' : 'Χ›Χ•Χ•Χ¥ ΧªΧ¤Χ¨Χ™Χ'}
-            aria-label={isCollapsed ? 'Χ”Χ¨Χ—Χ‘ ΧªΧ¤Χ¨Χ™Χ' : 'Χ›Χ•Χ•Χ¥ ΧªΧ¤Χ¨Χ™Χ'}
+            title={isCollapsed ? 'δψηα ϊτψιθ' : 'λεευ ϊτψιθ'}
+            aria-label={isCollapsed ? 'δψηα ϊτψιθ' : 'λεευ ϊτψιθ'}
             className="hidden md:inline-flex p-2 rounded-lg text-slate-500 hover:text-blue-700 hover:bg-slate-200 transition-colors"
           >
             {isCollapsed ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
           </button>
           <button
             onClick={onCloseMobileMenu}
-            title="Χ΅Χ’Χ•Χ¨ ΧªΧ¤Χ¨Χ™Χ"
-            aria-label="Χ΅Χ’Χ•Χ¨ ΧªΧ¤Χ¨Χ™Χ"
+            title="ρβεψ ϊτψιθ"
+            aria-label="ρβεψ ϊτψιθ"
             className="md:hidden inline-flex p-2 rounded-lg text-slate-500 hover:text-blue-700 hover:bg-slate-200 transition-colors"
           >
             <ChevronRight size={18} />
@@ -285,14 +285,14 @@ const Sidebar = ({ activeTab, setActiveTab, isCollapsed, onToggleCollapse, isMob
 
       <div className="mt-auto border-t border-slate-200 pt-4 flex flex-col gap-1">
         <button
-          title="ΧªΧΧ™Χ›Χ”"
+          title="ϊξιλδ"
           className={cn(
             "flex items-center px-3 py-2 text-slate-600 hover:text-blue-600 hover:bg-slate-200 rounded-lg transition-all text-right w-full",
             isCollapsed ? "justify-center" : "gap-3"
           )}
         >
           <HelpCircle size={18} />
-          {!isCollapsed && <span className="text-sm tracking-wide">ΧªΧΧ™Χ›Χ”</span>}
+          {!isCollapsed && <span className="text-sm tracking-wide">ϊξιλδ</span>}
         </button>
       </div>
     </aside>
@@ -306,8 +306,8 @@ const TopBar = ({ title, onOpenMobileMenu }: { title: string, onOpenMobileMenu: 
         <button
           onClick={onOpenMobileMenu}
           className="md:hidden p-2 rounded-lg hover:bg-slate-200/70 transition-colors text-slate-600"
-          aria-label="Χ¤ΧªΧ— ΧªΧ¤Χ¨Χ™Χ"
-          title="Χ¤ΧªΧ— ΧªΧ¤Χ¨Χ™Χ"
+          aria-label="τϊη ϊτψιθ"
+          title="τϊη ϊτψιθ"
         >
           <Menu size={20} />
         </button>
@@ -387,7 +387,7 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
     if (loc && loc.latitude) {
         setLocationState({ lat: loc.latitude, long: loc.longitude, tz: loc.timeZoneId || 'Asia/Jerusalem', name: loc.locationName });
     } else {
-        alert('ΧΧ™Χ§Χ•Χ ΧΧ Χ ΧΧ¦Χ Χ‘ΧΧΧ’Χ¨ (Χ Χ΅Χ” Χ‘ΧΧ Χ’ΧΧ™Χª, Χ›Χ’Χ•Χ "Tel Aviv").');
+        alert('ξιχεν μΰ πξφΰ αξΰβψ (πρδ αΰπβμιϊ, λβεο "Tel Aviv").');
     }
     setIsEditingLoc(false);
   };
@@ -398,14 +398,14 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&accept-language=he`);
                 const data = await res.json();
-                const city = data.address?.city || data.address?.town || data.address?.village || 'ΧΧ™Χ§Χ•Χ ΧΧ•ΧªΧΧ ΧΧ™Χ©Χ™Χª';
+                const city = data.address?.city || data.address?.town || data.address?.village || 'ξιχεν ξεϊΰν ΰιωιϊ';
                 setLocationState({ lat: pos.coords.latitude, long: pos.coords.longitude, tz: Intl.DateTimeFormat().resolvedOptions().timeZone, name: city });
             } catch {
-                setLocationState({ lat: pos.coords.latitude, long: pos.coords.longitude, tz: Intl.DateTimeFormat().resolvedOptions().timeZone, name: 'ΧΧ™Χ§Χ•Χ ΧΧ•ΧªΧΧ ΧΧ™Χ©Χ™Χª' });
+                setLocationState({ lat: pos.coords.latitude, long: pos.coords.longitude, tz: Intl.DateTimeFormat().resolvedOptions().timeZone, name: 'ξιχεν ξεϊΰν ΰιωιϊ' });
             }
         });
     } else {
-        alert("Χ©Χ™Χ¨Χ•ΧªΧ™ ΧΧ™Χ§Χ•Χ ΧΧ Χ ΧªΧΧ›Χ™Χ Χ‘Χ“Χ¤Χ“Χ¤Χ Χ–Χ”");
+        alert("ωιψεϊι ξιχεν μΰ πϊξλιν αγτγτο ζδ");
     }
   };
 
@@ -458,10 +458,10 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
     <div className="p-8 space-y-8">
       <div className="flex justify-between items-end">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500 mb-1 font-semibold">Χ”Χ©Χ§Χ¤Χ” Χ™Χ•ΧΧ™Χª</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500 mb-1 font-semibold">δωχτδ ιεξιϊ</p>
           <h2 className="text-4xl font-bold text-slate-900">{hDate.renderGematriya()}</h2>
           <p className="text-slate-500 font-medium">
-            {format(selectedDate, 'EEEE, d MMMM yyyy', { locale: he })} β€Ά Χ¤Χ¨Χ©Χª {getSedra(hDate.getFullYear(), false).lookup(hDate)?.parsha?.join('-') || 'ΧΧ™Χ Χ¤Χ¨Χ©Χ”'}
+            {format(selectedDate, 'EEEE, d MMMM yyyy', { locale: he })} • τψωϊ {getSedra(hDate.getFullYear(), false).lookup(hDate)?.parsha?.join('-') || 'ΰιο τψωδ'}
           </p>
         </div>
         <div className="flex gap-3">
@@ -469,14 +469,14 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
             onClick={onClearAll}
             className="px-4 py-2 bg-white text-red-600 border border-red-200 rounded-lg font-semibold text-sm shadow-sm flex items-center gap-2 hover:bg-red-50 active:scale-95 transition-all"
           >
-            Χ Χ™Χ§Χ•Χ™ Χ¨Χ©Χ™ΧΧ”
+            πιχει ψωιξδ
           </button>
           <button 
             onClick={onAddClick}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold text-sm shadow-sm flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all"
           >
             <Plus size={16} />
-            ΧΧ™Χ¨Χ•ΧΆ Χ—Χ“Χ©
+            ΰιψες ηγω
           </button>
         </div>
       </div>
@@ -487,7 +487,7 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
           <input 
             className="w-full bg-white border border-slate-200 shadow-sm rounded-xl py-3 pr-12 pl-4 text-sm focus:ring-2 focus:ring-blue-500/20 transition-all text-right"
             dir="rtl"
-            placeholder="Χ—Χ™Χ¤Χ•Χ© ΧΧ™Χ¨Χ•ΧΆΧ™Χ, ΧªΧΧ¨Χ™Χ›Χ™Χ ΧΧ• Χ©ΧΧ•Χª..."
+            placeholder="ηιτεω ΰιψεςιν, ϊΰψιλιν ΰε ωξεϊ..."
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -497,14 +497,14 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
           <button 
             onClick={() => setFilterType(null)}
             className={cn("px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors", filterType === null ? "bg-blue-100 text-blue-800" : "bg-slate-200 text-slate-700 hover:bg-slate-300")}
-          >Χ›Χ Χ”ΧΧ™Χ¨Χ•ΧΆΧ™Χ</button>
+          >λμ δΰιψεςιν</button>
           {uniqueTypes.map(t => (
             <button 
               key={t}
               onClick={() => setFilterType(t)}
               className={cn("px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors", filterType === t ? "bg-blue-100 text-blue-800" : "bg-slate-200 text-slate-700 hover:bg-slate-300")}
             >
-              {t === 'yahrzeit' ? 'ΧΧ–Χ›Χ¨Χ•Χª' : t === 'birthday' ? 'Χ™ΧΧ™ Χ”Χ•ΧΧ“Χª' : t === 'anniversary' ? 'Χ™ΧΧ™ Χ Χ™Χ©Χ•ΧΧ™Χ' : t}
+              {t === 'yahrzeit' ? 'ΰζλψεϊ' : t === 'birthday' ? 'ιξι δεμγϊ' : t === 'anniversary' ? 'ιξι πιωεΰιο' : t}
             </button>
           ))}
         </div>
@@ -512,23 +512,23 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
 
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-12 lg:col-span-8 space-y-6">
-          <h3 className="text-xs uppercase tracking-[0.15em] text-slate-500 font-bold">ΧΧ–Χ›Χ¨Χ•Χª Χ•Χ©ΧΧ—Χ•Χª Χ§Χ¨Χ•Χ‘Χ•Χª</h3>
+          <h3 className="text-xs uppercase tracking-[0.15em] text-slate-500 font-bold">ΰζλψεϊ εωξηεϊ χψεαεϊ</h3>
           <div className="space-y-4">
             {upcomingEvents.length === 0 ? (
               <div className="p-12 text-center bg-white rounded-xl border border-dashed border-slate-300 text-slate-400">
-                ΧΧ™Χ ΧΧ™Χ¨Χ•ΧΆΧ™Χ Χ§Χ¨Χ•Χ‘Χ™Χ ΧªΧ—Χª Χ”ΧΧ΅Χ Χ Χ”Χ–Χ”.
+                ΰιο ΰιψεςιν χψεαιν ϊηϊ δξρπο δζδ.
               </div>
             ) : (
               upcomingEvents.map((event) => {
                 const isToday = event.nextOccur.abs() === hDate.abs();
                 const hasReminderOverride = event.reminderOverride && event.reminderOverride !== 'use-export-default';
                 const overrideLabel = event.reminderOverride === 'day-before'
-                  ? 'Χ™Χ•Χ ΧΧ¤Χ Χ™ Χ‘Χ©ΧΆΧ” 19:00'
+                  ? 'ιεν μτπι αωςδ 19:00'
                   : event.reminderOverride === 'week-before'
-                    ? 'Χ©Χ‘Χ•ΧΆ ΧΧ¤Χ Χ™'
+                    ? 'ωαες μτπι'
                     : event.reminderOverride === 'both'
-                      ? 'Χ’Χ Χ©Χ‘Χ•ΧΆ ΧΧ¤Χ Χ™ Χ•Χ’Χ Χ™Χ•Χ ΧΧ¤Χ Χ™ Χ‘-19:00'
-                      : 'ΧΧΧ ΧªΧ–Χ›Χ•Χ¨Χ•Χª';
+                      ? 'βν ωαες μτπι εβν ιεν μτπι α-19:00'
+                      : 'μμΰ ϊζλεψεϊ';
                 const monthName = event.nextOccur.getMonthName();
                 const monthLabel = hebrewMonthsRev[monthName] || event.nextOccur.getMonthName('h') || monthName;
                 return (
@@ -538,7 +538,7 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
                     event.type === 'yahrzeit' ? "bg-purple-100 text-purple-800" : 
                     event.type === 'birthday' ? "bg-orange-100 text-orange-800" : "bg-blue-100 text-blue-800"
                   )}>
-                    <span className="text-[10px] font-bold leading-none">{event.type === 'yahrzeit' ? 'ΧΧ–Χ›Χ¨Χ”' : event.type === 'birthday' ? 'Χ™Χ•Χ Χ”Χ•ΧΧ“Χª' : event.type === 'anniversary' ? 'Χ™Χ•Χ Χ Χ™Χ©Χ•ΧΧ™Χ' : event.type}</span>
+                    <span className="text-[10px] font-bold leading-none">{event.type === 'yahrzeit' ? 'ΰζλψδ' : event.type === 'birthday' ? 'ιεν δεμγϊ' : event.type === 'anniversary' ? 'ιεν πιωεΰιο' : event.type}</span>
                     <span className="text-[10px] font-semibold mt-1 leading-none">{monthLabel}</span>
                     <span className="text-2xl font-extrabold mt-1 leading-none">{gematriya(event.nextOccur.getDate()) || event.hebrewDate.day}</span>
                   </div>
@@ -550,13 +550,13 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
                           event.type === 'yahrzeit' ? "bg-purple-200 text-purple-900" : 
                           event.type === 'birthday' ? "bg-orange-200 text-orange-900" : "bg-blue-200 text-blue-900"
                         )}>
-                          {event.type === 'yahrzeit' ? 'ΧΧ–Χ›Χ¨Χ”' : event.type === 'birthday' ? 'Χ™Χ•Χ Χ”Χ•ΧΧ“Χª' : event.type === 'anniversary' ? 'Χ™Χ•Χ Χ Χ™Χ©Χ•ΧΧ™Χ' : event.type}
+                          {event.type === 'yahrzeit' ? 'ΰζλψδ' : event.type === 'birthday' ? 'ιεν δεμγϊ' : event.type === 'anniversary' ? 'ιεν πιωεΰιο' : event.type}
                         </span>
                         {hasReminderOverride && (
                           <span
                             className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-700"
-                            title={`ΧΆΧ§Χ™Χ¤Χª ΧªΧ–Χ›Χ•Χ¨Χ•Χª: ${overrideLabel}`}
-                            aria-label={`ΧΆΧ§Χ™Χ¤Χª ΧªΧ–Χ›Χ•Χ¨Χ•Χª: ${overrideLabel}`}
+                            title={`ςχιτϊ ϊζλεψεϊ: ${overrideLabel}`}
+                            aria-label={`ςχιτϊ ϊζλεψεϊ: ${overrideLabel}`}
                           >
                             <Bell size={13} />
                           </span>
@@ -575,8 +575,8 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
                     </button>
                     {openMenuId === event.id && (
                       <div className="absolute left-0 top-full mt-1 bg-white border border-slate-200 shadow-xl rounded-lg py-1 w-32 z-10">
-                        <button onMouseDown={() => { onEdit(event); setOpenMenuId(null); }} className="w-full text-right px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-blue-600 font-medium">ΧΆΧ¨Χ™Χ›Χ”</button>
-                        <button onMouseDown={() => { onDelete(event.id); setOpenMenuId(null); }} className="w-full text-right px-4 py-2 text-xs text-red-600 hover:bg-red-50 font-medium">ΧΧ—Χ™Χ§Χ”</button>
+                        <button onMouseDown={() => { onEdit(event); setOpenMenuId(null); }} className="w-full text-right px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-blue-600 font-medium">ςψιλδ</button>
+                        <button onMouseDown={() => { onDelete(event.id); setOpenMenuId(null); }} className="w-full text-right px-4 py-2 text-xs text-red-600 hover:bg-red-50 font-medium">ξηιχδ</button>
                       </div>
                     )}
                   </div>
@@ -595,7 +595,7 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
                   <ChevronRight size={16} />
                 </button>
                 <button onClick={() => { setCalendarMonth(new Date()); setSelectedDate(new Date()); }} className="px-2 py-1 font-bold text-[11px] hover:bg-white rounded-md transition-colors text-slate-500 hover:text-blue-600 shadow-sm">
-                  Χ”Χ™Χ•Χ
+                  διεν
                 </button>
                 <button onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))} className="p-1 hover:bg-white rounded-md transition-colors text-slate-500 hover:text-blue-600 shadow-sm">
                   <ChevronLeft size={16} />
@@ -604,7 +604,7 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
               <h4 className="font-bold text-blue-900" dir="ltr">{format(calendarMonth, 'MMMM yyyy', { locale: he })} / {getHebrewMonthSpan(calendarMonth)}</h4>
             </div>
             <div className="grid grid-cols-7 gap-2 text-center" dir="rtl">
-              {['Χ', 'Χ‘', 'Χ’', 'Χ“', 'Χ”', 'Χ•', 'Χ©'].map(day => (
+              {['ΰ', 'α', 'β', 'γ', 'δ', 'ε', 'ω'].map(day => (
                 <span key={day} className="text-[10px] font-bold text-slate-400">{day}</span>
               ))}
               {Array.from({ length: startOfMonth(calendarMonth).getDay() }).map((_, i) => (
@@ -649,31 +649,31 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
                   type="text" 
                   value={locationQuery}
                   onChange={(e) => setLocationQuery(e.target.value)}
-                  placeholder="ΧΧΧ©Χ: Tel Aviv" 
+                  placeholder="μξωμ: Tel Aviv" 
                   className="flex-1 text-xs border border-slate-200 rounded px-2 py-1 bg-slate-50 text-slate-700"
                   autoFocus
                 />
-                <button type="submit" className="text-[10px] bg-blue-600 text-white px-2 rounded hover:bg-blue-700 font-bold">ΧΧ™Χ©Χ•Χ¨</button>
-                <button type="button" onClick={() => setIsEditingLoc(false)} className="text-[10px] bg-slate-200 text-slate-700 px-2 rounded hover:bg-slate-300 font-bold">Χ‘ΧΧ</button>
+                <button type="submit" className="text-[10px] bg-blue-600 text-white px-2 rounded hover:bg-blue-700 font-bold">ΰιωεψ</button>
+                <button type="button" onClick={() => setIsEditingLoc(false)} className="text-[10px] bg-slate-200 text-slate-700 px-2 rounded hover:bg-slate-300 font-bold">αθμ</button>
               </form>
             ) : (
               <div className="flex justify-between items-start mb-4 gap-2">
                 <h4 className="text-[11px] uppercase tracking-[0.1em] text-slate-500 font-bold truncate leading-relaxed" title={locationState.name}>
-                  Χ–ΧΧ Χ™ Χ”Χ™Χ•Χ <br/>
+                  ζξπι διεν <br/>
                   <button onClick={() => setIsEditingLoc(true)} className="text-blue-600 hover:underline">{locationState.name}</button>
                 </h4>
-                <button onClick={getLocation} type="button" className="text-[10px] text-blue-600 font-bold hover:underline shrink-0 bg-blue-50 px-2 py-1 rounded">ΧΧ™ΧªΧ•Χ¨ ΧΧ™Χ§Χ•Χ Χ©ΧΧ™</button>
+                <button onClick={getLocation} type="button" className="text-[10px] text-blue-600 font-bold hover:underline shrink-0 bg-blue-50 px-2 py-1 rounded">ΰιϊεψ ξιχεν ωμι</button>
               </div>
             )}
             <div className="space-y-3">
               {[
-                { label: 'ΧΆΧΧ•Χª Χ”Χ©Χ—Χ¨', value: zmanim.alotHaShachar },
-                { label: 'Χ Χ¥ Χ”Χ—ΧΧ”', value: zmanim.netzHaChama },
-                { label: 'Χ΅Χ•Χ£ Χ–ΧΧ Χ§Χ¨Χ™ΧΧª Χ©ΧΧΆ', value: zmanim.sofZmanKriasShema },
-                { label: 'Χ—Χ¦Χ•Χª Χ”Χ™Χ•Χ', value: zmanim.chatzos },
-                { label: 'Χ©Χ§Χ™ΧΆΧª Χ”Χ—ΧΧ”', value: zmanim.shkiya },
-                { label: 'Χ›Χ Χ™Χ΅Χª Χ©Χ‘Χª', value: zmanim.candleLighting },
-                { label: 'Χ¦ΧΧª Χ©Χ‘Χª', value: zmanim.havdalah },
+                { label: 'ςμεϊ δωηψ', value: zmanim.alotHaShachar },
+                { label: 'πυ δηξδ', value: zmanim.netzHaChama },
+                { label: 'ρεσ ζξο χψιΰϊ ωξς', value: zmanim.sofZmanKriasShema },
+                { label: 'ηφεϊ διεν', value: zmanim.chatzos },
+                { label: 'ωχιςϊ δηξδ', value: zmanim.shkiya },
+                { label: 'λπιρϊ ωαϊ', value: zmanim.candleLighting },
+                { label: 'φΰϊ ωαϊ', value: zmanim.havdalah },
               ].map((item, idx) => (
                 <div key={idx} className="flex justify-between items-center py-2 border-b border-slate-50 last:border-0">
                   <span className="text-sm font-medium text-slate-700">{item.label}</span>
@@ -695,15 +695,15 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
     customType: '',
     dateMode: 'hebrew' as 'hebrew' | 'gregorian',
     day: initialData?.hebrewDate.day || 1,
-    month: initialData?.hebrewDate.month || 'Χ Χ™Χ΅Χ',
-    yearStr: initialData?.hebrewDate.year ? gematriya(initialData.hebrewDate.year) : (gematriya(5786) || 'ΧªΧ©Χ¤Χ΄Χ•'),
+    month: initialData?.hebrewDate.month || 'πιρο',
+    yearStr: initialData?.hebrewDate.year ? gematriya(initialData.hebrewDate.year) : (gematriya(5786) || 'ϊωτΨε'),
     gregorianDate: format(new Date(), 'yyyy-MM-dd'),
     afterSunset: initialData?.hebrewDate.afterSunset || false,
     reminderOverride: (initialData?.reminderOverride || 'use-export-default') as ReminderMode
   });
 
   const months = [
-    'ΧªΧ©Χ¨Χ™', 'Χ—Χ©Χ•Χ•Χ', 'Χ›Χ΅ΧΧ•', 'ΧΧ‘Χª', 'Χ©Χ‘Χ', 'ΧΧ“Χ¨', 'ΧΧ“Χ¨ Χ‘Χ³', 'Χ Χ™Χ΅Χ', 'ΧΧ™Χ™Χ¨', 'Χ΅Χ™Χ•Χ•Χ', 'ΧªΧΧ•Χ–', 'ΧΧ‘', 'ΧΧΧ•Χ'
+    'ϊωψι', 'ηωεεο', 'λρμε', 'θαϊ', 'ωαθ', 'ΰγψ', 'ΰγψ αΧ', 'πιρο', 'ΰιιψ', 'ριεεο', 'ϊξεζ', 'ΰα', 'ΰμεμ'
   ];
 
   const uniqueCustomTypes = useMemo(() => {
@@ -713,26 +713,26 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
   const previewDate = useMemo(() => {
     if (formData.dateMode === 'hebrew') {
         try {
-            const cleanYearStr = formData.yearStr.replace(/^Χ”['Χ΄"]?(?=[Χ-Χª])/g, '');
+            const cleanYearStr = formData.yearStr.replace(/^δ['Ψ"]?(?=[ΰ-ϊ])/g, '');
             let y = gematriyaStrToNum(cleanYearStr);
             if (y < 3000) y += 5000;
             const monthMap: Record<string, string> = {
-                'Χ Χ™Χ΅Χ': 'Nisan', 'ΧΧ™Χ™Χ¨': 'Iyyar', 'Χ΅Χ™Χ•Χ•Χ': 'Sivan', 'ΧªΧΧ•Χ–': 'Tamuz', 'ΧΧ‘': 'Av', 'ΧΧΧ•Χ': 'Elul',
-                'ΧªΧ©Χ¨Χ™': 'Tishrei', 'Χ—Χ©Χ•Χ•Χ': 'Cheshvan', 'Χ›Χ΅ΧΧ•': 'Kislev', 'ΧΧ‘Χª': 'Tevet', 'Χ©Χ‘Χ': 'Shvat', 'ΧΧ“Χ¨': 'Adar 1', 'ΧΧ“Χ¨ Χ‘Χ³': 'Adar 2'
+                'πιρο': 'Nisan', 'ΰιιψ': 'Iyyar', 'ριεεο': 'Sivan', 'ϊξεζ': 'Tamuz', 'ΰα': 'Av', 'ΰμεμ': 'Elul',
+                'ϊωψι': 'Tishrei', 'ηωεεο': 'Cheshvan', 'λρμε': 'Kislev', 'θαϊ': 'Tevet', 'ωαθ': 'Shvat', 'ΰγψ': 'Adar 1', 'ΰγψ αΧ': 'Adar 2'
             };
             const hd = new HDate(formData.day, monthMap[formData.month] || 'Nisan', y);
             const targetHd = formData.afterSunset ? hd.prev() : hd;
             const gregDate = targetHd.greg();
             return {
-                title: 'ΧªΧΧ¨Χ™Χ ΧΧ•ΧΆΧ–Χ™ ΧΧ—Χ•Χ©Χ‘',
+                title: 'ϊΰψικ μεςζι ξηεωα',
                 value: format(gregDate, 'd MMMM yyyy', { locale: he }),
-                sedra: getSedra(y, true).lookup(hd)?.parsha?.join('-') || 'ΧΧ™Χ Χ¤Χ¨Χ©Χ”',
+                sedra: getSedra(y, true).lookup(hd)?.parsha?.join('-') || 'ΰιο τψωδ',
                 hd: hd,
                 previewDayStr: gematriya(formData.day),
                 previewMonthStr: formData.month
             };
         } catch {
-            return { title: 'ΧªΧΧ¨Χ™Χ ΧΧ•ΧΆΧ–Χ™ ΧΧ—Χ•Χ©Χ‘', value: 'ΧªΧΧ¨Χ™Χ ΧΧ Χ—Χ•Χ§Χ™', sedra: '', hd: null, previewDayStr: '', previewMonthStr: '' };
+            return { title: 'ϊΰψικ μεςζι ξηεωα', value: 'ϊΰψικ μΰ ηεχι', sedra: '', hd: null, previewDayStr: '', previewMonthStr: '' };
         }
     } else {
         try {
@@ -741,15 +741,15 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
             if (formData.afterSunset) hd = hd.next();
             
             return {
-                title: 'ΧªΧΧ¨Χ™Χ ΧΆΧ‘Χ¨Χ™ ΧΧ—Χ•Χ©Χ‘',
-                value: `${gematriya(hd.getDate())} Χ‘${hebrewMonthsRev[hd.getMonthName()] || hd.getMonthName()} ${gematriya(hd.getFullYear())}`,
-                sedra: getSedra(hd.getFullYear(), true).lookup(hd)?.parsha?.join('-') || 'ΧΧ™Χ Χ¤Χ¨Χ©Χ”',
+                title: 'ϊΰψικ ςαψι ξηεωα',
+                value: `${gematriya(hd.getDate())} α${hebrewMonthsRev[hd.getMonthName()] || hd.getMonthName()} ${gematriya(hd.getFullYear())}`,
+                sedra: getSedra(hd.getFullYear(), true).lookup(hd)?.parsha?.join('-') || 'ΰιο τψωδ',
                 hd: hd,
                 previewDayStr: gematriya(hd.getDate()),
                 previewMonthStr: hebrewMonthsRev[hd.getMonthName()] || hd.getMonthName()
             };
         } catch {
-            return { title: 'ΧªΧΧ¨Χ™Χ ΧΆΧ‘Χ¨Χ™ ΧΧ—Χ•Χ©Χ‘', value: 'ΧªΧΧ¨Χ™Χ ΧΧ Χ—Χ•Χ§Χ™', sedra: '', hd: null, previewDayStr: '', previewMonthStr: '' };
+            return { title: 'ϊΰψικ ςαψι ξηεωα', value: 'ϊΰψικ μΰ ηεχι', sedra: '', hd: null, previewDayStr: '', previewMonthStr: '' };
         }
     }
   }, [formData.dateMode, formData.day, formData.month, formData.yearStr, formData.afterSunset, formData.gregorianDate]);
@@ -772,7 +772,7 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
       type: formData.type === 'other' ? formData.customType.trim() : formData.type,
       hebrewDate: {
         day: d,
-        month: hebrewMonthsRev[m] || 'Χ Χ™Χ΅Χ',
+        month: hebrewMonthsRev[m] || 'πιρο',
         year: y,
         afterSunset: formData.afterSunset
       },
@@ -783,26 +783,26 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
   return (
     <div className="p-8 max-w-4xl mx-auto">
       <div className="mb-10">
-        <h2 className="text-4xl font-extrabold text-slate-900 mt-1">Χ¨Χ™Χ©Χ•Χ ΧΧ™Χ¨Χ•ΧΆ Χ—Χ“Χ© Χ‘ΧΧΆΧ’Χ Χ”Χ—Χ™Χ™Χ</h2>
-        <p className="text-slate-500 mt-2 max-w-xl">Χ΅Χ Χ›Χ¨Χ ΧΧ‘Χ Χ™ Χ“Χ¨Χ ΧΧ™Χ©Χ™Χ•Χª ΧΆΧ ΧΧ—Χ–Χ•Χ¨ Χ”Χ™Χ¨Χ— Χ•Χ”Χ©ΧΧ© Χ”ΧΆΧ‘Χ¨Χ™. Χ—Χ™Χ©Χ•Χ‘Χ™Χ ΧΧ΅ΧΧ¨Χ•Χ Χ•ΧΧ™Χ™Χ ΧΧ“Χ•Χ™Χ§Χ™Χ Χ™Χ•Χ—ΧΧ• Χ‘Χ”ΧªΧΧ ΧΧ‘Χ—Χ™Χ¨Χª Χ”ΧΧ–Χ•Χ¨ Χ©ΧΧ.</p>
+        <h2 className="text-4xl font-extrabold text-slate-900 mt-1">ψιωεν ΰιψες ηγω αξςβμ δηιιν</h2>
+        <p className="text-slate-500 mt-2 max-w-xl">ρπλψο ΰαπι γψκ ΰιωιεϊ ςν ξηζεψ διψη εδωξω δςαψι. ηιωεαιν ΰρθψεπεξιιν ξγειχιν ιεημε αδϊΰν μαηιψϊ δΰζεψ ωμκ.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
         <section className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
           <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
             <span className="w-1.5 h-6 bg-blue-600 rounded-full"></span>
-            Χ–Χ”Χ•Χª Χ”ΧΧ™Χ¨Χ•ΧΆ
+            ζδεϊ δΰιψες
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Χ΅Χ•Χ’ ΧΧ™Χ¨Χ•ΧΆ</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">ρεβ ΰιψες</label>
               <div className="grid grid-cols-4 gap-2">
                 {[
-                  { id: 'birthday', label: 'Χ™Χ•Χ Χ”Χ•ΧΧ“Χª', icon: Cake },
-                  { id: 'anniversary', label: 'Χ™Χ•Χ Χ Χ™Χ©Χ•ΧΧ™Χ', icon: Heart },
-                  { id: 'yahrzeit', label: 'ΧΧ–Χ›Χ¨Χ”', icon: Flame },
+                  { id: 'birthday', label: 'ιεν δεμγϊ', icon: Cake },
+                  { id: 'anniversary', label: 'ιεν πιωεΰιο', icon: Heart },
+                  { id: 'yahrzeit', label: 'ΰζλψδ', icon: Flame },
                   ...uniqueCustomTypes.map(t => ({ id: t, label: t, icon: Star })),
-                  { id: 'other', label: 'ΧΧ—Χ¨...', icon: PlusCircle }
+                  { id: 'other', label: 'ΰηψ...', icon: PlusCircle }
                 ].map((type) => (
                   <label key={type.id} className="cursor-pointer">
                     <input 
@@ -823,7 +823,7 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
                 <div className="mt-2 text-right">
                   <input
                     type="text"
-                    placeholder="Χ”Χ–Χ Χ΅Χ•Χ’ ΧΧ™Χ¨Χ•ΧΆ ΧΧ•ΧªΧΧ ΧΧ™Χ©Χ™Χª..."
+                    placeholder="δζο ρεβ ΰιψες ξεϊΰν ΰιωιϊ..."
                     className="w-full bg-slate-50 border-none rounded-lg py-2 px-3 focus:ring-2 focus:ring-blue-500/20 text-sm text-right"
                     value={formData.customType}
                     onChange={(e) => setFormData({ ...formData, customType: e.target.value })}
@@ -833,11 +833,11 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
               )}
             </div>
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Χ©Χ/Χ›Χ•ΧªΧ¨Χª</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">ων/λεϊψϊ</label>
               <div className="relative">
                 <input 
                   className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm text-right"
-                  placeholder="ΧΧ“Χ•Χ’ΧΧ”: ΧΧ‘Χ¨Χ”Χ Χ‘Χ ΧªΧ¨Χ—"
+                  placeholder="μγεβξδ: ΰαψδν αο ϊψη"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   type="text"
@@ -845,7 +845,7 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
                 />
                 <Info className="absolute left-3 top-3 text-slate-400" size={16} />
               </div>
-              <p className="text-[10px] text-slate-400 italic">Χ™Χ© ΧΧ¦Χ™Χ™Χ Χ›Χ•ΧªΧ¨Χª ΧΧΧ™Χ¨Χ•ΧΆ ΧΧ• Χ©Χ ΧΧΧ.</p>
+              <p className="text-[10px] text-slate-400 italic">ιω μφιιο λεϊψϊ μΰιψες ΰε ων ξμΰ.</p>
             </div>
           </div>
         </section>
@@ -854,26 +854,26 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold flex items-center gap-2">
               <span className="w-1.5 h-6 bg-slate-400 rounded-full"></span>
-              Χ‘Χ—Χ™Χ¨Χª ΧªΧΧ¨Χ™Χ
+              αηιψϊ ϊΰψικ
             </h3>
             <div className="flex bg-slate-100 rounded-lg p-1 text-[10px] font-bold">
               <button 
                 type="button" 
                 onClick={() => setFormData({ ...formData, dateMode: 'hebrew' })}
                 className={cn("px-3 py-1 rounded transition-all uppercase tracking-tighter", formData.dateMode === 'hebrew' ? "bg-white shadow-sm text-blue-600" : "text-slate-400")}
-              >ΧªΧΧ¨Χ™Χ ΧΆΧ‘Χ¨Χ™</button>
+              >ϊΰψικ ςαψι</button>
               <button 
                 type="button" 
                 onClick={() => setFormData({ ...formData, dateMode: 'gregorian' })}
                 className={cn("px-3 py-1 rounded transition-all uppercase tracking-tighter", formData.dateMode === 'gregorian' ? "bg-white shadow-sm text-blue-600" : "text-slate-400")}
-              >ΧªΧΧ¨Χ™Χ ΧΧ•ΧΆΧ–Χ™</button>
+              >ϊΰψικ μεςζι</button>
             </div>
           </div>
           
           {formData.dateMode === 'hebrew' ? (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Χ—Χ•Χ“Χ© ΧΆΧ‘Χ¨Χ™</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">ηεγω ςαψι</label>
                 <select 
                   className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
                   value={formData.month}
@@ -884,7 +884,7 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Χ™Χ•Χ</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">ιεν</label>
                 <select 
                   className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
                   value={formData.day}
@@ -897,10 +897,10 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Χ©Χ Χ” ΧΆΧ‘Χ¨Χ™Χª</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">ωπδ ςαψιϊ</label>
                 <input 
                   className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm text-right"
-                  placeholder="ΧªΧ©Χ¤Χ΄Χ•"
+                  placeholder="ϊωτΨε"
                   value={formData.yearStr}
                   onChange={(e) => setFormData({ ...formData, yearStr: e.target.value })}
                   type="text"
@@ -908,22 +908,22 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Χ–ΧΧ</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">ζξο</label>
                  <select 
                   className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
                   value={formData.afterSunset ? "after" : "before"}
                   onChange={(e) => setFormData({ ...formData, afterSunset: e.target.value === "after" })}
                   required
                 >
-                  <option value="before">ΧΧ¤Χ Χ™ Χ”Χ©Χ§Χ™ΧΆΧ”</option>
-                  <option value="after">ΧΧ—Χ¨Χ™ Χ”Χ©Χ§Χ™ΧΆΧ”</option>
+                  <option value="before">μτπι δωχιςδ</option>
+                  <option value="after">ΰηψι δωχιςδ</option>
                 </select>
               </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">ΧªΧΧ¨Χ™Χ ΧΧ•ΧΆΧ–Χ™</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">ϊΰψικ μεςζι</label>
                 <input 
                   type="date"
                   className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm text-right"
@@ -933,15 +933,15 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Χ–ΧΧ Χ¨ΧΧ•Χ•Χ ΧΧ™</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">ζξο ψμεεπθι</label>
                  <select 
                   className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
                   value={formData.afterSunset ? "after" : "before"}
                   onChange={(e) => setFormData({ ...formData, afterSunset: e.target.value === "after" })}
                   required
                 >
-                  <option value="before">ΧΧ¤Χ Χ™ Χ”Χ©Χ§Χ™ΧΆΧ”</option>
-                  <option value="after">ΧΧ—Χ¨Χ™ Χ”Χ©Χ§Χ™ΧΆΧ” (Χ”Χ•Χ¤Χ ΧΧ™Χ•Χ Χ”ΧΆΧ‘Χ¨Χ™ Χ”Χ‘Χ)</option>
+                  <option value="before">μτπι δωχιςδ</option>
+                  <option value="after">ΰηψι δωχιςδ (δετκ μιεν δςαψι δαΰ)</option>
                 </select>
               </div>
             </div>
@@ -952,8 +952,8 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
           <div className="flex items-center gap-3 mb-4">
             <Bell className="text-blue-600" size={20} />
             <div>
-              <h3 className="text-lg font-bold text-slate-900">ΧΆΧ§Χ™Χ¤Χª ΧªΧ–Χ›Χ•Χ¨Χ•Χª ΧΧΧ™Χ¨Χ•ΧΆ</h3>
-              <p className="text-xs text-slate-500 mt-1">Χ”Χ’Χ“Χ¨Χ” Χ›ΧΧ ΧªΧ’Χ‘Χ¨ ΧΆΧ Χ”Χ’Χ“Χ¨Χª Χ”ΧªΧ–Χ›Χ•Χ¨Χ•Χª Χ”Χ’ΧΧ•Χ‘ΧΧ™Χª Χ‘ΧΧ΅Χ Χ”Χ™Χ™Χ¦Χ•Χ, ΧΆΧ‘Χ•Χ¨ Χ”ΧΧ™Χ¨Χ•ΧΆ Χ”Χ–Χ” Χ‘ΧΧ‘Χ“.</p>
+              <h3 className="text-lg font-bold text-slate-900">ςχιτϊ ϊζλεψεϊ μΰιψες</h3>
+              <p className="text-xs text-slate-500 mt-1">δβγψδ λΰο ϊβαψ ςμ δβγψϊ δϊζλεψεϊ δβμεαμιϊ αξρκ διιφεΰ, ςαεψ δΰιψες δζδ αμαγ.</p>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -973,7 +973,7 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
             ))}
           </div>
           <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900 leading-relaxed">
-            <strong className="font-bold">Χ©Χ™Χ ΧΧ‘:</strong> Χ”Χ’Χ“Χ¨Χª "Χ”Χ©ΧªΧΧ© Χ‘Χ”Χ’Χ“Χ¨Χª Χ”Χ™Χ™Χ¦Χ•Χ" ΧªΧ—Χ™Χ ΧΧª Χ‘Χ—Χ™Χ¨Χª Χ”ΧªΧ–Χ›Χ•Χ¨Χ•Χª Χ”Χ’ΧΧ•Χ‘ΧΧ™Χª ΧΧ“Χ£ Χ”Χ™Χ™Χ¦Χ•Χ. Χ›Χ Χ‘Χ—Χ™Χ¨Χ” ΧΧ—Χ¨Χª Χ›ΧΧ ΧªΧ’Χ‘Χ¨ ΧΆΧΧ™Χ”.
+            <strong className="font-bold">ωιν μα:</strong> δβγψϊ "δωϊξω αδβγψϊ διιφεΰ" ϊηιμ ΰϊ αηιψϊ δϊζλεψεϊ δβμεαμιϊ ξγσ διιφεΰ. λμ αηιψδ ΰηψϊ λΰο ϊβαψ ςμιδ.
           </div>
         </section>
 
@@ -984,9 +984,9 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
               <span className="text-2xl font-extrabold text-blue-900">{previewDate.previewDayStr}</span>
             </div>
             <div>
-              <h4 className="font-bold text-slate-900">Χ΅Χ™Χ›Χ•Χ ΧªΧ¦Χ•Χ’Χ” ΧΧ§Χ“Χ™ΧΧ”</h4>
+              <h4 className="font-bold text-slate-900">ριλεν ϊφεβδ ξχγιξδ</h4>
               <p className="text-xs text-slate-500">{previewDate.title}: {previewDate.value}</p>
-              {previewDate.sedra && <p className="text-xs text-slate-500 italic">Χ¤Χ¨Χ©Χª {previewDate.sedra}</p>}
+              {previewDate.sedra && <p className="text-xs text-slate-500 italic">τψωϊ {previewDate.sedra}</p>}
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -995,13 +995,13 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
               onClick={onCancel}
               className="px-8 py-3 bg-white border border-slate-200 text-slate-700 font-bold text-sm rounded-xl hover:bg-slate-50 transition-colors"
             >
-              Χ‘Χ™ΧΧ•Χ
+              αιθεμ
             </button>
             <button 
               type="submit"
               className="px-10 py-3 bg-gradient-to-br from-blue-600 to-blue-800 text-white font-bold text-sm rounded-xl shadow-lg hover:shadow-blue-500/20 active:scale-95 transition-all"
             >
-              Χ©ΧΧ™Χ¨Χª ΧΧ™Χ¨Χ•ΧΆ
+              ωξιψϊ ΰιψες
             </button>
           </div>
         </div>
@@ -1091,7 +1091,7 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
           <button onClick={prevMonth} className="p-2 hover:bg-white rounded-lg transition-colors shadow-sm">
             <ChevronRight size={20} />
           </button>
-          <button onClick={() => setCurrentMonth(new Date())} className="px-4 py-2 font-semibold text-sm hover:bg-white rounded-lg transition-colors shadow-sm">Χ”Χ™Χ•Χ</button>
+          <button onClick={() => setCurrentMonth(new Date())} className="px-4 py-2 font-semibold text-sm hover:bg-white rounded-lg transition-colors shadow-sm">διεν</button>
           <button onClick={nextMonth} className="p-2 hover:bg-white rounded-lg transition-colors shadow-sm">
             <ChevronLeft size={20} />
           </button>
@@ -1100,7 +1100,7 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
 
       <div className="flex-1 bg-white rounded-xl overflow-hidden border border-slate-200 flex flex-col shadow-sm">
         <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50">
-          {['Χ¨ΧΧ©Χ•Χ', 'Χ©Χ Χ™', 'Χ©ΧΧ™Χ©Χ™', 'Χ¨Χ‘Χ™ΧΆΧ™', 'Χ—ΧΧ™Χ©Χ™', 'Χ©Χ™Χ©Χ™', 'Χ©Χ‘Χª'].map(day => (
+          {['ψΰωεο', 'ωπι', 'ωμιωι', 'ψαιςι', 'ηξιωι', 'ωιωι', 'ωαϊ'].map(day => (
             <div key={day} className="py-3 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">{day}</div>
           ))}
         </div>
@@ -1135,7 +1135,7 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
                       type="button"
                       onClick={() => setSelectedCalendarItem({
                         title: ev.render('he'),
-                        dayLabel: `${format(day, 'd/M')} β€Ά ${hDate.renderGematriya()}`,
+                        dayLabel: `${format(day, 'd/M')} • ${hDate.renderGematriya()}`,
                         kind: 'holiday'
                       })}
                       className="w-full text-[10px] text-right px-2 py-0.5 bg-blue-600 text-white rounded font-bold truncate hover:opacity-90 transition-opacity"
@@ -1149,7 +1149,7 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
                       type="button"
                       onClick={() => setSelectedCalendarItem({
                         title: ev.title,
-                        dayLabel: `${format(day, 'd/M')} β€Ά ${hDate.renderGematriya()}`,
+                        dayLabel: `${format(day, 'd/M')} • ${hDate.renderGematriya()}`,
                         kind: 'user',
                         typeLabel: ev.type
                       })}
@@ -1171,13 +1171,13 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-slate-100 p-4 rounded-xl flex flex-col gap-3">
-          <h3 className="text-[10px] uppercase tracking-widest font-bold text-slate-500">ΧΧ§Χ¨Χ ΧΧ•Χ— Χ”Χ©Χ Χ”</h3>
+          <h3 className="text-[10px] uppercase tracking-widest font-bold text-slate-500">ξχψΰ μεη δωπδ</h3>
           <div className="flex flex-wrap gap-2">
             {[
-              { type: 'holiday', color: 'bg-blue-600', label: 'Χ—Χ’Χ™Χ Χ•ΧΧ•ΧΆΧ“Χ™Χ' },
-              { type: 'birthday', color: 'bg-blue-300', label: 'Χ™ΧΧ™ Χ”Χ•ΧΧ“Χª' },
-              { type: 'yahrzeit', color: 'bg-red-600', label: 'ΧΧ–Χ›Χ¨Χ•Χª' },
-              { type: 'anniversary', color: 'bg-purple-300', label: 'Χ™ΧΧ™ Χ Χ™Χ©Χ•ΧΧ™Χ' },
+              { type: 'holiday', color: 'bg-blue-600', label: 'ηβιν εξεςγιν' },
+              { type: 'birthday', color: 'bg-blue-300', label: 'ιξι δεμγϊ' },
+              { type: 'yahrzeit', color: 'bg-red-600', label: 'ΰζλψεϊ' },
+              { type: 'anniversary', color: 'bg-purple-300', label: 'ιξι πιωεΰιο' },
               ...uniqueTypes.filter(t => !['birthday', 'yahrzeit', 'anniversary'].includes(t)).map(t => ({
                 type: t, color: 'bg-purple-300', label: t
               }))
@@ -1191,10 +1191,10 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
         </div>
         <div className="bg-slate-100 p-4 rounded-xl flex items-center justify-between group cursor-pointer hover:bg-slate-200 transition-colors">
           <div>
-            <h3 className="text-[10px] uppercase tracking-widest font-bold text-slate-500">Χ”Χ—Χ’ Χ”Χ‘Χ</h3>
-            <p className="text-lg font-bold">{nextHoliday ? nextHoliday.name : 'ΧΧ™Χ Χ§Χ¨Χ•Χ‘'}</p>
+            <h3 className="text-[10px] uppercase tracking-widest font-bold text-slate-500">δηβ δαΰ</h3>
+            <p className="text-lg font-bold">{nextHoliday ? nextHoliday.name : 'ΰιο χψεα'}</p>
             {nextHoliday && <p className="text-xs text-slate-500">
-              {nextHoliday.daysUntil === 0 ? 'Χ”Χ™Χ•Χ' : `ΧΆΧ•Χ“ ${nextHoliday.daysUntil} Χ™ΧΧ™Χ`} ({format(nextHoliday.gregDate, 'd Χ‘MMMM', { locale: he })})
+              {nextHoliday.daysUntil === 0 ? 'διεν' : `ςεγ ${nextHoliday.daysUntil} ιξιν`} ({format(nextHoliday.gregDate, 'd αMMMM', { locale: he })})
             </p>}
           </div>
           <ChevronLeft className="text-blue-600 group-hover:-translate-x-1 transition-transform" size={20} />
@@ -1205,8 +1205,8 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
               <Sparkles className="text-blue-600" size={20} />
             </div>
             <div>
-              <h3 className="text-[10px] uppercase tracking-widest font-bold text-slate-500">ΧªΧ•Χ‘Χ Χª Χ–ΧΧ Χ™Χ</h3>
-              <p className="text-xs leading-tight">Χ”Χ©Χ§Χ™ΧΆΧ” Χ”Χ™Χ•Χ Χ‘- <span className="font-bold">17:44</span>. Χ”Χ“ΧΧ§Χª Χ Χ¨Χ•Χª Χ‘ΧΆΧ•Χ“ <span className="text-blue-600 font-bold">4 Χ©ΧΆΧ•Χª</span>.</p>
+              <h3 className="text-[10px] uppercase tracking-widest font-bold text-slate-500">ϊεαπϊ ζξπιν</h3>
+              <p className="text-xs leading-tight">δωχιςδ διεν α- <span className="font-bold">17:44</span>. δγμχϊ πψεϊ αςεγ <span className="text-blue-600 font-bold">4 ωςεϊ</span>.</p>
             </div>
           </div>
         </div>
@@ -1222,7 +1222,7 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
               exit={{ opacity: 0 }}
               onClick={() => setSelectedCalendarItem(null)}
               className="fixed inset-0 z-[70] bg-slate-900/40 backdrop-blur-[1px]"
-              aria-label="Χ΅Χ’Χ•Χ¨ Χ¤Χ¨ΧΧ™ ΧΧ™Χ¨Χ•ΧΆ"
+              aria-label="ρβεψ τψθι ΰιψες"
             />
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -1242,7 +1242,7 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
                   onClick={() => setSelectedCalendarItem(null)}
                   className="shrink-0 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold transition-colors"
                 >
-                  Χ΅Χ’Χ•Χ¨
+                  ρβεψ
                 </button>
               </div>
 
@@ -1251,7 +1251,7 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
                   "px-2.5 py-1 rounded-full text-xs font-bold",
                   selectedCalendarItem.kind === 'holiday' ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-700"
                 )}>
-                  {selectedCalendarItem.kind === 'holiday' ? 'Χ—Χ’ ΧΧ• ΧΧ•ΧΆΧ“' : 'ΧΧ™Χ¨Χ•ΧΆ ΧΧ™Χ©Χ™'}
+                  {selectedCalendarItem.kind === 'holiday' ? 'ηβ ΰε ξεςγ' : 'ΰιψες ΰιωι'}
                 </span>
                 {selectedCalendarItem.typeLabel && (
                   <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
@@ -1308,7 +1308,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
         type: event.type,
         hebrewDate: {
           day: Number(event.hebrewDate.day) || 1,
-          month: event.hebrewDate.month || 'Χ Χ™Χ΅Χ',
+          month: event.hebrewDate.month || 'πιρο',
           year: Number(event.hebrewDate.year) || 5784,
           afterSunset: !!event.hebrewDate.afterSunset
         },
@@ -1363,7 +1363,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
             } else if (trimmed.startsWith('X-EXPORT-REMINDER-MODE:')) {
               importedSettings.reminderMode = normalizeReminderMode(trimmed.substring('X-EXPORT-REMINDER-MODE:'.length));
             } else if (trimmed === 'BEGIN:VEVENT') {
-              currentEvent = { id: Math.random().toString(36).substr(2, 9), type: 'birthday', hebrewDate: { day: 1, month: 'Χ Χ™Χ΅Χ', year: 5784, afterSunset: false } };
+              currentEvent = { id: Math.random().toString(36).substr(2, 9), type: 'birthday', hebrewDate: { day: 1, month: 'πιρο', year: 5784, afterSunset: false } };
               currentEventHasHebrewDate = false;
             } else if (trimmed === 'END:VEVENT' && currentEvent) {
               if (currentEvent.title && currentEventHasHebrewDate) newEvents.push(currentEvent as CalendarEvent);
@@ -1396,13 +1396,13 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
           if (newEvents.length > 0) {
             onImport?.({ events: newEvents, exportSettings: importedSettings });
           } else {
-            alert('ΧΧ Χ ΧΧ¦ΧΧ• ΧΧ™Χ¨Χ•ΧΆΧ™Χ Χ‘Χ§Χ•Χ‘Χ¥ Χ”-ICS.');
+            alert('μΰ πξφΰε ΰιψεςιν αχεαυ δ-ICS.');
           }
         } else {
-          alert('Χ¤Χ•Χ¨ΧΧ Χ§Χ•Χ‘Χ¥ ΧΧ Χ ΧªΧΧ. Χ Χ ΧΧ”ΧΆΧΧ•Χª Χ§Χ•Χ‘Χ¥ ΧΧ΅Χ•Χ’ .ics');
+          alert('τεψξθ χεαυ μΰ πϊξκ. πΰ μδςμεϊ χεαυ ξρεβ .ics');
         }
       } catch (err) {
-        alert('Χ©Χ’Χ™ΧΧ” Χ‘Χ¤ΧΆΧ Χ•Χ— Χ”Χ§Χ•Χ‘Χ¥.');
+        alert('ωβιΰδ ατςπεη δχεαυ.');
       }
     };
     reader.readAsText(file);
@@ -1471,20 +1471,20 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
   }, []);
 
   const hebrewToEnglishMonth: Record<string, string> = {
-    'Χ Χ™Χ΅Χ': 'Nisan',
-    'ΧΧ™Χ™Χ¨': 'Iyyar',
-    'Χ΅Χ™Χ•Χ•Χ': 'Sivan',
-    'ΧªΧΧ•Χ–': 'Tamuz',
-    'ΧΧ‘': 'Av',
-    'ΧΧΧ•Χ': 'Elul',
-    'ΧªΧ©Χ¨Χ™': 'Tishrei',
-    'Χ—Χ©Χ•Χ•Χ': 'Cheshvan',
-    'Χ›Χ΅ΧΧ•': 'Kislev',
-    'ΧΧ‘Χª': 'Tevet',
-    'Χ©Χ‘Χ': 'Shvat',
-    'ΧΧ“Χ¨': 'Adar 1',
-    'ΧΧ“Χ¨ ΧΧ³': 'Adar 1',
-    'ΧΧ“Χ¨ Χ‘Χ³': 'Adar 2'
+    'πιρο': 'Nisan',
+    'ΰιιψ': 'Iyyar',
+    'ριεεο': 'Sivan',
+    'ϊξεζ': 'Tamuz',
+    'ΰα': 'Av',
+    'ΰμεμ': 'Elul',
+    'ϊωψι': 'Tishrei',
+    'ηωεεο': 'Cheshvan',
+    'λρμε': 'Kislev',
+    'θαϊ': 'Tevet',
+    'ωαθ': 'Shvat',
+    'ΰγψ': 'Adar 1',
+    'ΰγψ ΰΧ': 'Adar 1',
+    'ΰγψ αΧ': 'Adar 2'
   };
 
   const formatIcsDate = (date: Date) => {
@@ -1592,7 +1592,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
         try {
           const hd = new HDate(event.hebrewDate.day, month, targetHebrewYear);
           generated.push({
-            summary: `${eventTypeLabel} Χ${event.title} (${i})`,
+            summary: `${eventTypeLabel} μ${event.title} (${i})`,
             type: event.type,
             eventDate: hd.greg(),
             reminders,
@@ -1652,7 +1652,7 @@ ${reminderSection}END:VEVENT`;
         const dtStart = formatIcsDate(eventDate);
         const dtEnd = formatIcsDate(addDays(eventDate, 1));
         const dtStamp = formatIcsUtcDateTime(new Date());
-        const summary = `${eventTypeLabel} Χ${e.title} (${occurrence})`;
+        const summary = `${eventTypeLabel} μ${e.title} (${occurrence})`;
         const escapedSummary = escapeIcsText(summary);
         const escapedCategory = escapeIcsText(e.type);
         const icsReminders = buildIcsReminders(summary, eventDate, eventReminderRules);
@@ -1860,31 +1860,31 @@ END:VCALENDAR`;
 
   const handleGoogleCalendarSync = async () => {
     if (!GOOGLE_CLIENT_ID) {
-      alert('ΧΧ Χ”Χ•Χ’Χ“Χ¨ VITE_GOOGLE_CLIENT_ID. Χ”Χ•Χ΅Χ£ ΧΧª Χ”ΧΧ©ΧªΧ Χ” Χ‘Χ§Χ•Χ‘Χ¥ .env.local Χ•Χ”Χ¤ΧΆΧ ΧΧ—Χ“Χ© ΧΧª Χ”Χ™Χ™Χ©Χ•Χ.');
+      alert('μΰ δεβγψ VITE_GOOGLE_CLIENT_ID. δερσ ΰϊ δξωϊπδ αχεαυ .env.local εδτςμ ξηγω ΰϊ διιωεν.');
       return;
     }
     if (!isGoogleScriptReady) {
-      alert('Google Identity Services ΧΆΧ“Χ™Χ™Χ Χ ΧΧΆΧ. Χ Χ΅Χ” Χ©Χ•Χ‘ Χ‘ΧΆΧ•Χ“ Χ¨Χ’ΧΆ.');
+      alert('Google Identity Services ςγιιο πθςο. πρδ ωεα αςεγ ψβς.');
       return;
     }
     if (syncEventsForGoogle.length === 0) {
-      alert('ΧΧ™Χ ΧΧ™Χ¨Χ•ΧΆΧ™Χ ΧΧ΅Χ•ΧΧ Χ™Χ ΧΧ™Χ™Χ¦Χ•Χ/Χ΅Χ Χ›Χ¨Χ•Χ.');
+      alert('ΰιο ΰιψεςιν ξρεξπιν μιιφεΰ/ρπλψεο.');
       return;
     }
     if (!targetCalendarName.trim()) {
-      alert('Χ Χ ΧΧ”Χ–Χ™Χ Χ©Χ Χ™Χ•ΧΧ ΧΧ΅Χ Χ›Χ¨Χ•Χ.');
+      alert('πΰ μδζιο ων ιεξο μρπλψεο.');
       return;
     }
 
     setGoogleSyncSummary(null);
     setIsGoogleSyncing(true);
-    setGoogleSyncStatus('ΧΧªΧ—Χ‘Χ¨ ΧΧ—Χ©Χ‘Χ•Χ Google...');
+    setGoogleSyncStatus('ξϊηαψ μηωαεο Google...');
 
     try {
       const accessToken = await requestGoogleAccessToken();
       const normalizedCalendarName = targetCalendarName.trim();
 
-      setGoogleSyncStatus('Χ‘Χ•Χ“Χ§ ΧΧ Χ§Χ™Χ™Χ Χ™Χ•ΧΧ Χ‘Χ©Χ Χ”ΧΧ‘Χ•Χ§Χ©...');
+      setGoogleSyncStatus('αεγχ ΰν χιιν ιεξο αων δξαεχω...');
       const existingCalendar = await findOwnedCalendarByName(accessToken, normalizedCalendarName);
 
       let calendarId = '';
@@ -1895,7 +1895,7 @@ END:VCALENDAR`;
       let firstDeleteError = '';
 
       if (existingCalendar) {
-        const shouldOverwrite = window.confirm(`Χ ΧΧ¦Χ Χ›Χ‘Χ¨ Χ™Χ•ΧΧ Χ‘Χ©Χ "${normalizedCalendarName}". Χ”Χ™Χ•ΧΧ Χ”Χ§Χ™Χ™Χ Χ™Χ™ΧΧ—Χ§ ΧΧ—ΧΧ•ΧΧ™Χ Χ•Χ™Χ•Χ•Χ¦Χ¨ ΧΧ—Χ“Χ© ΧΧ¤Χ Χ™ Χ”Χ΅Χ Χ›Χ¨Χ•Χ. ΧΧ”ΧΧ©Χ™Χ?`);
+        const shouldOverwrite = window.confirm(`πξφΰ λαψ ιεξο αων "${normalizedCalendarName}". διεξο δχιιν ιιξηχ μημεθιο ειεεφψ ξηγω μτπι δρπλψεο. μδξωικ?`);
         if (!shouldOverwrite) {
           return;
         }
@@ -1903,7 +1903,7 @@ END:VCALENDAR`;
         usedExistingCalendar = true;
         calendarName = existingCalendar.summary || normalizedCalendarName;
 
-        setGoogleSyncStatus('ΧΧ•Χ—Χ§ ΧΧª Χ”Χ™Χ•ΧΧ Χ”Χ§Χ™Χ™Χ...');
+        setGoogleSyncStatus('ξεηχ ΰϊ διεξο δχιιν...');
         const clearResult = await deleteCalendarIfExists(accessToken, existingCalendar.id);
         deleted = clearResult.deleted;
         deleteFailed = clearResult.deleteFailed;
@@ -1913,7 +1913,7 @@ END:VCALENDAR`;
           throw new Error(clearResult.firstDeleteError || 'Failed to delete existing calendar.');
         }
 
-        setGoogleSyncStatus('Χ™Χ•Χ¦Χ¨ Χ™Χ•ΧΧ Χ—Χ“Χ© ΧΆΧ ΧΧ•ΧªΧ• Χ©Χ...');
+        setGoogleSyncStatus('ιεφψ ιεξο ηγω ςν ΰεϊε ων...');
         const recreatedCalendar = await callGoogleCalendarApi<{ id: string; summary?: string }>(
           accessToken,
           'https://www.googleapis.com/calendar/v3/calendars',
@@ -1929,7 +1929,7 @@ END:VCALENDAR`;
         calendarId = recreatedCalendar.id;
         calendarName = recreatedCalendar.summary || normalizedCalendarName;
       } else {
-        setGoogleSyncStatus('Χ™Χ•Χ¦Χ¨ Χ™Χ•ΧΧ Χ—Χ“Χ©...');
+        setGoogleSyncStatus('ιεφψ ιεξο ηγω...');
         const createdCalendar = await callGoogleCalendarApi<{ id: string; summary?: string }>(
           accessToken,
           'https://www.googleapis.com/calendar/v3/calendars',
@@ -1963,7 +1963,7 @@ END:VCALENDAR`;
         const batchStart = pointer + 1;
         const batchEnd = pointer + batch.length;
 
-        setGoogleSyncStatus(`ΧΧΆΧΧ” ΧΧ™Χ¨Χ•ΧΆΧ™Χ ΧΧ™Χ•ΧΧ "${calendarName}"... ${pointer}/${total} (batch ${batchStart}-${batchEnd}, concurrency ${adaptiveConcurrency})`);
+        setGoogleSyncStatus(`ξςμδ ΰιψεςιν μιεξο "${calendarName}"... ${pointer}/${total} (batch ${batchStart}-${batchEnd}, concurrency ${adaptiveConcurrency})`);
 
         const results = await Promise.all(batch.map(async (syncEvent) => {
           const startDate = formatGoogleAllDayDate(syncEvent.eventDate);
@@ -2030,7 +2030,7 @@ END:VCALENDAR`;
         }
 
         pointer += batch.length;
-        setGoogleSyncStatus(`ΧΧΆΧΧ” ΧΧ™Χ¨Χ•ΧΆΧ™Χ ΧΧ™Χ•ΧΧ "${calendarName}"... ${pointer}/${total} (concurrency ${adaptiveConcurrency})`);
+        setGoogleSyncStatus(`ξςμδ ΰιψεςιν μιεξο "${calendarName}"... ${pointer}/${total} (concurrency ${adaptiveConcurrency})`);
 
         if (batchRateLimited > 0) {
           adaptiveConcurrency = Math.max(minConcurrency, adaptiveConcurrency - 1);
@@ -2040,7 +2040,7 @@ END:VCALENDAR`;
         }
       }
 
-      setGoogleSyncStatus('Χ”Χ΅Χ Χ›Χ¨Χ•Χ Χ”Χ•Χ©ΧΧ. ΧΧ›Χ™Χ Χ΅Χ™Χ›Χ•Χ...');
+      setGoogleSyncStatus('δρπλψεο δεωμν. ξλιο ριλεν...');
       setGoogleSyncSummary({
         calendarId,
         calendarName,
@@ -2054,8 +2054,8 @@ END:VCALENDAR`;
         firstInsertPayload
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Χ©Χ’Χ™ΧΧ” ΧΧ Χ¦Χ¤Χ•Χ™Χ” Χ‘Χ΅Χ Χ›Χ¨Χ•Χ.';
-      alert(`Χ©Χ’Χ™ΧΧ” Χ‘Χ΅Χ Χ›Χ¨Χ•Χ ΧΧ•Χ Google Calendar: ${message}`);
+      const message = error instanceof Error ? error.message : 'ωβιΰδ μΰ φτειδ αρπλψεο.';
+      alert(`ωβιΰδ αρπλψεο ξεμ Google Calendar: ${message}`);
     } finally {
       setIsGoogleSyncing(false);
       setGoogleSyncStatus('');
@@ -2065,15 +2065,15 @@ END:VCALENDAR`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(previews[selectedSchema]);
-    alert('Χ”Χ•ΧΆΧªΧ§ ΧΧΧ•Χ—!');
+    alert('δεςϊχ μμεη!');
   };
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full">
       <div className="mb-8 text-right">
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Χ›ΧΧ™ Χ Χ™Χ”Χ•Χ Χ ΧªΧ•Χ Χ™Χ</p>
-        <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-2">Χ™Χ™Χ¦Χ•Χ Χ•Χ™Χ™Χ‘Χ•Χ Χ ΧªΧ•Χ Χ™ ΧΧ•Χ— Χ©Χ Χ”</h1>
-        <p className="text-slate-500 max-w-2xl">Χ Χ”Χ ΧΧª Χ”ΧΧ™Χ“ΧΆ Χ”ΧΧ™ΧΧ•Χ¨Χ’Χ™ Χ©ΧΧ Χ‘Χ“Χ™Χ•Χ§ ΧΧ¨Χ‘Χ™. Χ”Χ•Χ¨Χ“ Χ•Χ™Χ™Χ‘Χ Χ ΧªΧ•Χ Χ™Χ Χ‘Χ¤Χ•Χ¨ΧΧ iCalendar (ICS) ΧΧΆΧ‘Χ•Χ“Χ” ΧΧ•Χ Χ™Χ•ΧΧ Χ’Χ•Χ’Χ.</p>
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">λμι πιδεμ πϊεπιν</p>
+        <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-2">ιιφεΰ ειιαεΰ πϊεπι μεη ωπδ</h1>
+        <p className="text-slate-500 max-w-2xl">πδμ ΰϊ δξιγς δμιθεψβι ωμκ αγιεχ ξψαι. δεψγ ειιαΰ πϊεπιν ατεψξθ iCalendar (ICS) μςαεγδ ξεμ ιεξο βεβμ.</p>
       </div>
 
       <div className="grid grid-cols-12 gap-6 items-start">
@@ -2081,14 +2081,14 @@ END:VCALENDAR`;
           <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-right">
             <div className="flex items-center gap-3 mb-6">
                <ArrowLeftRight className="text-blue-600" size={20} />
-              <h3 className="font-bold text-lg">Χ”Χ’Χ“Χ¨Χ•Χª Χ™Χ™Χ¦Χ•Χ</h3>
+              <h3 className="font-bold text-lg">δβγψεϊ ιιφεΰ</h3>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-3">Χ›ΧΧ•Χ Χ΅Χ•Χ’Χ™ ΧΧ™Χ¨Χ•ΧΆΧ™Χ</label>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-3">λμεμ ρεβι ΰιψεςιν</label>
                 <div className="flex flex-wrap gap-2 justify-start">
                   {uniqueEventTypes.length === 0 && (
-                    <span className="text-xs text-slate-400">ΧΧ™Χ Χ΅Χ•Χ’Χ™ ΧΧ™Χ¨Χ•ΧΆΧ™Χ Χ–ΧΧ™Χ Χ™Χ Χ›Χ¨Χ’ΧΆ</span>
+                    <span className="text-xs text-slate-400">ΰιο ρεβι ΰιψεςιν ζξιπιν λψβς</span>
                   )}
                   {uniqueEventTypes.map(type => {
                     const selected = selectedEventTypes.includes(type);
@@ -2111,13 +2111,13 @@ END:VCALENDAR`;
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-3">ΧªΧ–Χ›Χ•Χ¨Χ•Χª ΧΧΧ™Χ¨Χ•ΧΆΧ™Χ ΧΧ™Χ•Χ¦ΧΧ™Χ</label>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-3">ϊζλεψεϊ μΰιψεςιν ξιεφΰιν</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {[
-                    { id: 'none', label: 'ΧΧΧ ΧªΧ–Χ›Χ•Χ¨Χ•Χª', desc: 'ΧΧ ΧªΧªΧ•Χ•Χ΅Χ£ ΧªΧ–Χ›Χ•Χ¨Χª ΧΧ§Χ‘Χ¦Χ™Χ Χ”ΧΧ™Χ•Χ¦ΧΧ™Χ' },
-                    { id: 'day-before', label: 'Χ™Χ•Χ ΧΧ¤Χ Χ™ Χ‘Χ©ΧΆΧ” 19:00', desc: 'ΧªΧ–Χ›Χ•Χ¨Χª ΧΧ—Χª Χ‘ΧΆΧ¨Χ‘ Χ©ΧΧ¤Χ Χ™ Χ”ΧΧ™Χ¨Χ•ΧΆ' },
-                    { id: 'week-before', label: 'Χ©Χ‘Χ•ΧΆ ΧΧ¤Χ Χ™', desc: 'ΧªΧ–Χ›Χ•Χ¨Χª ΧΧ—Χª 7 Χ™ΧΧ™Χ ΧΧ¤Χ Χ™ Χ”ΧΧ™Χ¨Χ•ΧΆ' },
-                    { id: 'both', label: 'Χ’Χ Χ•Χ’Χ', desc: 'Χ©Χ‘Χ•ΧΆ ΧΧ¤Χ Χ™ Χ•Χ’Χ Χ™Χ•Χ ΧΧ¤Χ Χ™ Χ‘-19:00' },
+                    { id: 'none', label: 'μμΰ ϊζλεψεϊ', desc: 'μΰ ϊϊεερσ ϊζλεψϊ μχαφιν δξιεφΰιν' },
+                    { id: 'day-before', label: 'ιεν μτπι αωςδ 19:00', desc: 'ϊζλεψϊ ΰηϊ αςψα ωμτπι δΰιψες' },
+                    { id: 'week-before', label: 'ωαες μτπι', desc: 'ϊζλεψϊ ΰηϊ 7 ιξιν μτπι δΰιψες' },
+                    { id: 'both', label: 'βν εβν', desc: 'ωαες μτπι εβν ιεν μτπι α-19:00' },
                   ].map(option => (
                     <button
                       key={option.id}
@@ -2140,7 +2140,7 @@ END:VCALENDAR`;
           <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-right">
              <div className="flex items-center gap-3 mb-4">
               <ArrowLeftRight className="text-blue-600" size={20} />
-              <h3 className="font-bold text-lg">Χ™Χ™Χ‘Χ•Χ Χ ΧªΧ•Χ Χ™Χ</h3>
+              <h3 className="font-bold text-lg">ιιαεΰ πϊεπιν</h3>
             </div>
             <div 
               onDragOver={(e) => e.preventDefault()}
@@ -2150,10 +2150,10 @@ END:VCALENDAR`;
                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <UploadCloud className="text-blue-600" size={24} />
               </div>
-              <p className="text-sm font-bold text-slate-900 mb-1">Χ’Χ¨Χ•Χ¨ Χ§Χ•Χ‘Χ¥ ICS ΧΧ›ΧΧ</p>
-               <p className="text-[10px] text-slate-500 mb-4">ΧΧ• ΧΧ—Χ¥ ΧΧ‘Χ—Χ™Χ¨Χª Χ§Χ•Χ‘Χ¥ ΧΧ”ΧΧ—Χ©Χ‘</p>
+              <p className="text-sm font-bold text-slate-900 mb-1">βψεψ χεαυ ICS μλΰο</p>
+               <p className="text-[10px] text-slate-500 mb-4">ΰε μηυ μαηιψϊ χεαυ ξδξηωα</p>
               <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors pointer-events-none">
-                 Χ‘Χ—Χ¨ Χ§Χ•Χ‘Χ¥
+                 αηψ χεαυ
                </button>
                <input type="file" ref={fileInputRef} className="hidden" accept=".ics" onChange={handleFileSelect} />
             </div>
@@ -2161,27 +2161,27 @@ END:VCALENDAR`;
 
            <div className="pt-2">
             <div className="bg-white border border-slate-200 rounded-xl p-4 mb-3 text-right">
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Χ©Χ Χ”Χ™Χ•ΧΧ Χ‘Χ’Χ•Χ’Χ ΧΧ΅Χ Χ›Χ¨Χ•Χ</label>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">ων διεξο αβεβμ μρπλψεο</label>
               <input
                 type="text"
                 value={targetCalendarName}
                 onChange={(e) => setTargetCalendarName(e.target.value)}
                 disabled={isGoogleSyncing}
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-sm text-right focus:ring-2 focus:ring-blue-500/20"
-                placeholder="ΧΧΧ©Χ: HebrewCalendar ΧΧ©Χ¤Χ—Χ”"
+                placeholder="μξωμ: HebrewCalendar ξωτηδ"
               />
-              <p className="mt-2 text-[10px] text-slate-500 leading-relaxed">ΧΧ Χ™Χ•ΧΧ Χ‘Χ©Χ Χ”Χ–Χ” Χ›Χ‘Χ¨ Χ§Χ™Χ™Χ Χ‘Χ—Χ©Χ‘Χ•Χ Χ©ΧΧ, ΧªΧ•Χ¦Χ’ ΧΧ–Χ”Χ¨Χ” Χ•Χ”Χ™Χ•ΧΧ Χ™Χ™ΧΧ—Χ§ ΧΧ—ΧΧ•ΧΧ™Χ Χ•Χ™Χ•Χ•Χ¦Χ¨ ΧΧ—Χ“Χ© ΧΧ¤Χ Χ™ Χ”Χ΅Χ Χ›Χ¨Χ•Χ.</p>
+              <p className="mt-2 text-[10px] text-slate-500 leading-relaxed">ΰν ιεξο αων δζδ λαψ χιιν αηωαεο ωμκ, ϊεφβ ΰζδψδ εδιεξο ιιξηχ μημεθιο ειεεφψ ξηγω μτπι δρπλψεο.</p>
             </div>
             <button onClick={handleDownload} className="w-full bg-gradient-to-r from-blue-600 to-blue-800 p-4 rounded-xl text-white font-bold flex items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-all group">
                <Download className="group-hover:translate-y-1 transition-transform" size={20} />
-              Χ‘Χ¦ΧΆ Χ”Χ•Χ¨Χ“Χª Χ ΧªΧ•Χ Χ™Χ
+              αφς δεψγϊ πϊεπιν
             </button>
               <button onClick={handleGoogleCalendarSync} disabled={isGoogleSyncing} className={cn("w-full mt-3 bg-white border border-blue-200 text-blue-700 p-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-sm transition-all group", isGoogleSyncing ? "opacity-60 cursor-not-allowed" : "hover:bg-blue-50 active:scale-[0.98]")}>
                 <ArrowLeftRight className="group-hover:rotate-6 transition-transform" size={20} />
-                {isGoogleSyncing ? 'ΧΧ΅Χ Χ›Χ¨Χ ΧΧ™Χ•ΧΧ Χ—Χ“Χ©...' : 'Χ΅Χ Χ›Χ¨Χ•Χ ΧΧ•ΧΧ•ΧΧΧ™ ΧΧ™Χ•ΧΧ Χ—Χ“Χ©'}
+                {isGoogleSyncing ? 'ξρπλψο μιεξο ηγω...' : 'ρπλψεο ΰεθεξθι μιεξο ηγω'}
               </button>
             {googleSyncStatus && <p className="text-center mt-2 text-[11px] text-blue-600 font-semibold">{googleSyncStatus}</p>}
-            <p className="text-center mt-3 text-[11px] text-slate-400 uppercase tracking-widest opacity-60">Χ Χ¤Χ— ΧΧ©Χ•ΧΆΧ¨: 442 KB</p>
+            <p className="text-center mt-3 text-[11px] text-slate-400 uppercase tracking-widest opacity-60">πτη ξωεςψ: 442 KB</p>
            </div>
          </div>
 
@@ -2194,7 +2194,7 @@ END:VCALENDAR`;
                   <div className="w-2.5 h-2.5 rounded-full bg-yellow-400/40"></div>
                   <div className="w-2.5 h-2.5 rounded-full bg-green-400/40"></div>
                 </div>
-                 <span className="mr-4 text-[11px] font-bold text-slate-500 uppercase tracking-widest">ΧªΧ¦Χ•Χ’Χ” ΧΧ§Χ“Χ™ΧΧ” Χ©Χ {selectedSchema.toUpperCase()}</span>
+                 <span className="mr-4 text-[11px] font-bold text-slate-500 uppercase tracking-widest">ϊφεβδ ξχγιξδ ωμ {selectedSchema.toUpperCase()}</span>
                </div>
                <button onClick={handleCopy} className="text-slate-500 hover:text-white transition-colors">
                 <Copy size={18} />
@@ -2205,14 +2205,14 @@ END:VCALENDAR`;
             </div>
             <div className="mt-auto bg-white/5 px-6 py-3 flex items-center gap-4 border-t border-white/5">
                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-               <span className="text-[10px] text-slate-500 font-medium">ΧΧ™ΧΧ•Χª Χ‘Χ–ΧΧ ΧΧΧª: Χ”ΧΧ‘Χ Χ” ΧªΧ§Χ™Χ</span>
+               <span className="text-[10px] text-slate-500 font-medium">ΰιξεϊ αζξο ΰξϊ: δξαπδ ϊχιο</span>
             </div>
            </div>
           <div className="mt-6 flex gap-4 p-4 rounded-xl bg-blue-50 border border-blue-100 text-right">
              <Info className="text-blue-600 shrink-0" size={20} />
              <p className="text-xs text-slate-600 leading-relaxed">
-              <strong className="text-slate-900 block mb-1">Χ”ΧΆΧ¨Χª ΧΧ¤ΧªΧ—</strong>
-               Χ›Χ¤ΧªΧ•Χ¨ Χ”Χ΅Χ Χ›Χ¨Χ•Χ Χ”ΧΧ•ΧΧ•ΧΧΧ™ ΧΧ΅Χ Χ›Χ¨Χ ΧΧ¤Χ™ Χ©Χ Χ”Χ™Χ•ΧΧ Χ©ΧªΧ’Χ“Χ™Χ¨. ΧΧ Χ”Χ™Χ•ΧΧ Χ›Χ‘Χ¨ Χ§Χ™Χ™Χ - ΧªΧ•Χ¦Χ’ ΧΧ–Χ”Χ¨Χ”, Χ”Χ™Χ•ΧΧ Χ™Χ™ΧΧ—Χ§ Χ•Χ™Χ•Χ•Χ¦Χ¨ ΧΧ—Χ“Χ©, Χ•ΧΧ– Χ™ΧªΧ‘Χ¦ΧΆ Χ™Χ™Χ‘Χ•Χ Χ“Χ¨Χ Google Calendar API.
+              <strong className="text-slate-900 block mb-1">δςψϊ ξτϊη</strong>
+               λτϊεψ δρπλψεο δΰεθεξθι ξρπλψο μτι ων διεξο ωϊβγιψ. ΰν διεξο λαψ χιιν - ϊεφβ ΰζδψδ, διεξο ιιξηχ ειεεφψ ξηγω, εΰζ ιϊαφς ιιαεΰ γψκ Google Calendar API.
              </p>
            </div>
          </div>
@@ -2228,7 +2228,7 @@ END:VCALENDAR`;
               exit={{ opacity: 0 }}
               onClick={() => setGoogleSyncSummary(null)}
               className="fixed inset-0 z-[70] bg-slate-900/40 backdrop-blur-[1px]"
-              aria-label="Χ΅Χ’Χ•Χ¨ Χ΅Χ™Χ›Χ•Χ Χ΅Χ Χ›Χ¨Χ•Χ"
+              aria-label="ρβεψ ριλεν ρπλψεο"
             />
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -2240,7 +2240,7 @@ END:VCALENDAR`;
             >
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div>
-                  <p className="text-[11px] uppercase tracking-widest text-slate-500 font-bold">Χ΅Χ™Χ›Χ•Χ Χ΅Χ Χ›Χ¨Χ•Χ Google Calendar</p>
+                  <p className="text-[11px] uppercase tracking-widest text-slate-500 font-bold">ριλεν ρπλψεο Google Calendar</p>
                   <h3 className="text-lg font-extrabold text-slate-900 leading-tight mt-1 break-words">{googleSyncSummary.calendarName}</h3>
                 </div>
                 <button
@@ -2248,35 +2248,35 @@ END:VCALENDAR`;
                   onClick={() => setGoogleSyncSummary(null)}
                   className="shrink-0 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold transition-colors"
                 >
-                  Χ΅Χ’Χ•Χ¨
+                  ρβεψ
                 </button>
               </div>
 
               <div className="space-y-2 text-sm text-slate-700">
-                <div className="flex justify-between"><span>ΧΧ¦Χ‘ Χ™Χ•ΧΧ</span><span className="font-bold">{googleSyncSummary.usedExistingCalendar ? 'Χ™Χ•ΧΧ Χ§Χ™Χ™Χ (Χ ΧΧ—Χ§ Χ•Χ Χ•Χ¦Χ¨ ΧΧ—Χ“Χ©)' : 'Χ™Χ•ΧΧ Χ—Χ“Χ©'}</span></div>
-                <div className="flex justify-between"><span>ΧΧ™Χ¨Χ•ΧΆΧ™Χ Χ©Χ”Χ•Χ–Χ Χ•</span><span className="font-bold text-blue-700">{googleSyncSummary.inserted}</span></div>
-                <div className="flex justify-between"><span>ΧΧ™Χ¨Χ•ΧΆΧ™Χ Χ©Χ Χ›Χ©ΧΧ• Χ‘Χ”Χ–Χ Χ”</span><span className="font-bold text-amber-700">{googleSyncSummary.failed}</span></div>
-                <div className="flex justify-between"><span>Χ™Χ•ΧΧ Χ™Χ Χ©Χ ΧΧ—Χ§Χ• ΧΧ¤Χ Χ™ Χ”Χ΅Χ Χ›Χ¨Χ•Χ</span><span className="font-bold">{googleSyncSummary.deleted}</span></div>
-                <div className="flex justify-between"><span>Χ›Χ©ΧΧ™Χ Χ‘ΧΧ—Χ™Χ§Χª Χ™Χ•ΧΧ</span><span className="font-bold text-amber-700">{googleSyncSummary.deleteFailed}</span></div>
+                <div className="flex justify-between"><span>ξφα ιεξο</span><span className="font-bold">{googleSyncSummary.usedExistingCalendar ? 'ιεξο χιιν (πξηχ επεφψ ξηγω)' : 'ιεξο ηγω'}</span></div>
+                <div className="flex justify-between"><span>ΰιψεςιν ωδεζπε</span><span className="font-bold text-blue-700">{googleSyncSummary.inserted}</span></div>
+                <div className="flex justify-between"><span>ΰιψεςιν ωπλωμε αδζπδ</span><span className="font-bold text-amber-700">{googleSyncSummary.failed}</span></div>
+                <div className="flex justify-between"><span>ιεξπιν ωπξηχε μτπι δρπλψεο</span><span className="font-bold">{googleSyncSummary.deleted}</span></div>
+                <div className="flex justify-between"><span>λωμιν αξηιχϊ ιεξο</span><span className="font-bold text-amber-700">{googleSyncSummary.deleteFailed}</span></div>
               </div>
 
               {googleSyncSummary.firstInsertError && (
                 <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900 leading-relaxed break-words">
-                  <strong className="font-bold block mb-1">Χ©Χ’Χ™ΧΧª Χ”Χ”Χ–Χ Χ” Χ”Χ¨ΧΧ©Χ•Χ Χ”</strong>
+                  <strong className="font-bold block mb-1">ωβιΰϊ δδζπδ δψΰωεπδ</strong>
                   {googleSyncSummary.firstInsertError}
                 </div>
               )}
 
               {googleSyncSummary.firstInsertPayload && (
                 <div className="mt-3 rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 text-xs text-slate-700 leading-relaxed break-words">
-                  <strong className="font-bold block mb-1">Payload Χ©Χ Χ Χ™Χ΅Χ™Χ•Χ Χ”Χ”Χ–Χ Χ” Χ”Χ¨ΧΧ©Χ•Χ</strong>
+                  <strong className="font-bold block mb-1">Payload ωμ πιριεο δδζπδ δψΰωεο</strong>
                   <pre className="whitespace-pre-wrap text-[11px]">{googleSyncSummary.firstInsertPayload}</pre>
                 </div>
               )}
 
               {googleSyncSummary.firstDeleteError && (
                 <div className="mt-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900 leading-relaxed break-words">
-                  <strong className="font-bold block mb-1">Χ©Χ’Χ™ΧΧª Χ”ΧΧ—Χ™Χ§Χ” Χ”Χ¨ΧΧ©Χ•Χ Χ”</strong>
+                  <strong className="font-bold block mb-1">ωβιΰϊ δξηιχδ δψΰωεπδ</strong>
                   {googleSyncSummary.firstDeleteError}
                 </div>
               )}
@@ -2287,14 +2287,14 @@ END:VCALENDAR`;
                   onClick={() => window.open(`https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent(googleSyncSummary.calendarId)}`, '_blank', 'noopener,noreferrer')}
                   className="flex-1 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors"
                 >
-                  Χ¤ΧªΧ— ΧΧª Χ”Χ™Χ•ΧΧ Χ‘Χ’Χ•Χ’Χ
+                  τϊη ΰϊ διεξο αβεβμ
                 </button>
                 <button
                   type="button"
                   onClick={() => setGoogleSyncSummary(null)}
                   className="px-3 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm font-bold hover:bg-slate-200 transition-colors"
                 >
-                  Χ΅Χ’Χ•Χ¨
+                  ρβεψ
                 </button>
               </div>
             </motion.div>
@@ -2394,17 +2394,17 @@ export default function App() {
   };
 
   const handleDelete = (id: string) => {
-    if (window.confirm('Χ”ΧΧ ΧΧªΧ” Χ‘ΧΧ•Χ— Χ©Χ‘Χ¨Χ¦Χ•Χ Χ ΧΧΧ—Χ•Χ§ ΧΧ™Χ¨Χ•ΧΆ Χ–Χ”?')) {
+    if (window.confirm('δΰν ΰϊδ αθεη ωαψφεπκ μξηεχ ΰιψες ζδ?')) {
       setEvents(events.filter(e => e.id !== id));
     }
   };
 
   const handleClearAll = () => {
     if (events.length === 0) {
-      alert('Χ”Χ¨Χ©Χ™ΧΧ” Χ›Χ‘Χ¨ Χ¨Χ™Χ§Χ”.');
+      alert('δψωιξδ λαψ ψιχδ.');
       return;
     }
-    if (window.confirm('ΧΧΧ—Χ•Χ§ ΧΧª Χ›Χ Χ”ΧΧ™Χ¨Χ•ΧΆΧ™Χ ΧΧ”Χ¨Χ©Χ™ΧΧ”?')) {
+    if (window.confirm('μξηεχ ΰϊ λμ δΰιψεςιν ξδψωιξδ?')) {
       setEvents([]);
       setEditingEvent(null);
       setActiveTab('dashboard');
@@ -2420,7 +2420,7 @@ export default function App() {
         selectedEventTypes: payload.exportSettings.selectedEventTypes
       });
     }
-    alert(`Χ™Χ•Χ‘ΧΧ• Χ‘Χ”Χ¦ΧΧ—Χ” ${payload.events.length} ΧΧ™Χ¨Χ•ΧΆΧ™Χ!`);
+    alert(`ιεαΰε αδφμηδ ${payload.events.length} ΰιψεςιν!`);
   };
 
   const renderContent = () => {
@@ -2448,10 +2448,10 @@ export default function App() {
 
   const getTitle = () => {
     switch (activeTab) {
-      case 'dashboard': return 'Χ™Χ•ΧΧ ΧΆΧ‘Χ¨Χ™ ΧΧ™Χ•ΧΧ Χ’Χ•Χ’Χ';
-      case 'calendar': return 'ΧΧ•Χ— Χ©Χ Χ”';
-      case 'add-event': return 'Χ”Χ•Χ΅Χ¤Χª ΧΧ™Χ¨Χ•ΧΆ';
-      case 'import-export': return 'Χ™Χ™Χ¦Χ•Χ Χ•Χ™Χ™Χ‘Χ•Χ';
+      case 'dashboard': return 'ιεξο ςαψι μιεξο βεβμ';
+      case 'calendar': return 'μεη ωπδ';
+      case 'add-event': return 'δερτϊ ΰιψες';
+      case 'import-export': return 'ιιφεΰ ειιαεΰ';
       default: return 'HC4GC';
     }
   };
@@ -2462,7 +2462,7 @@ export default function App() {
         <button
           onClick={() => setIsMobileMenuOpen(false)}
           className="fixed inset-0 bg-slate-900/35 backdrop-blur-[1px] z-40 md:hidden"
-          aria-label="Χ΅Χ’Χ•Χ¨ ΧªΧ¤Χ¨Χ™Χ"
+          aria-label="ρβεψ ϊτψιθ"
         />
       )}
 
@@ -2497,12 +2497,12 @@ export default function App() {
 
         <footer className="w-full mt-auto py-4 border-t border-slate-200 bg-slate-50 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center px-4 sm:px-8">
           <div className="text-slate-400 font-inter text-[11px] uppercase tracking-widest">
-            Β© 2024 HC4GC β€Ά ΧΧΆΧ¨Χ›Χª Χ¤ΧΆΧ™ΧΧ”
+            © 2024 HC4GC • ξςψλϊ τςιμδ
           </div>
           <div className="flex gap-6 flex-wrap">
-            <button className="text-slate-400 hover:text-blue-800 font-inter text-[11px] uppercase tracking-widest transition-colors opacity-80 hover:opacity-100">Χ΅ΧΧΧ•Χ΅</button>
-            <button className="text-slate-400 hover:text-blue-800 font-inter text-[11px] uppercase tracking-widest transition-colors opacity-80 hover:opacity-100">Χ¤Χ¨ΧΧ™Χ•Χª</button>
-            <button className="text-slate-400 hover:text-blue-800 font-inter text-[11px] uppercase tracking-widest transition-colors opacity-80 hover:opacity-100">ΧªΧ ΧΧ™Χ</button>
+            <button className="text-slate-400 hover:text-blue-800 font-inter text-[11px] uppercase tracking-widest transition-colors opacity-80 hover:opacity-100">ρθθερ</button>
+            <button className="text-slate-400 hover:text-blue-800 font-inter text-[11px] uppercase tracking-widest transition-colors opacity-80 hover:opacity-100">τψθιεϊ</button>
+            <button className="text-slate-400 hover:text-blue-800 font-inter text-[11px] uppercase tracking-widest transition-colors opacity-80 hover:opacity-100">ϊπΰιν</button>
           </div>
         </footer>
       </main>
