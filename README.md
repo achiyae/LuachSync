@@ -5,6 +5,10 @@
 # HC4GC
 Hebrew Calendar for Google Calendar
 
+## Public Privacy Policy
+
+See the standalone policy: [PRIVACY.md](PRIVACY.md)
+
 
 ## Run Locally
 
