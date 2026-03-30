@@ -1283,6 +1283,7 @@ const CalendarView = ({ events }: { events: CalendarEvent[] }) => {
 const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsChange }: { events: CalendarEvent[], onImport?: (payload: ImportPayload) => void, exportSettings: ExportSettingsState, onExportSettingsChange: React.Dispatch<React.SetStateAction<ExportSettingsState>> }) => {
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
   const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
+  const GOOGLE_CALENDAR_IMPORT_URL = 'https://calendar.google.com/calendar/u/0/r/settings/export';
   const selectedSchema = exportSettings.selectedSchema;
   const reminderMode = exportSettings.reminderMode;
   const uniqueEventTypes = useMemo(() => Array.from(new Set(events.map(e => e.type))), [events]);
@@ -1294,6 +1295,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
   const [googleSyncStatus, setGoogleSyncStatus] = useState<string>('');
   const [targetCalendarName, setTargetCalendarName] = useState('HC4GC');
   const [googleSyncSummary, setGoogleSyncSummary] = useState<GoogleSyncSummary | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const normalizeReminderMode = (mode: string | undefined): ExportSettingsState['reminderMode'] => {
     if (mode === 'day-before' || mode === 'week-before' || mode === 'both' || mode === 'none') {
@@ -2172,61 +2174,96 @@ END:VCALENDAR`;
             </div>
            </section>
 
-           <div className="pt-2">
-            <div className="bg-white border border-slate-200 rounded-xl p-4 mb-3 text-right">
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">שם היומן בגוגל לסנכרון</label>
-              <input
-                type="text"
-                value={targetCalendarName}
-                onChange={(e) => setTargetCalendarName(e.target.value)}
-                disabled={isGoogleSyncing}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-sm text-right focus:ring-2 focus:ring-blue-500/20"
-                placeholder="למשל: HebrewCalendar משפחה"
-              />
-              <p className="mt-2 text-[10px] text-slate-500 leading-relaxed">אם יומן בשם הזה כבר קיים בחשבון שלך, תוצג אזהרה והיומן יימחק לחלוטין ויווצר מחדש לפני הסנכרון.</p>
-            </div>
-            <button onClick={handleDownload} className="w-full bg-gradient-to-r from-blue-600 to-blue-800 p-4 rounded-xl text-white font-bold flex items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-all group">
-               <Download className="group-hover:translate-y-1 transition-transform" size={20} />
-              בצע הורדת נתונים
-            </button>
-              <button onClick={handleGoogleCalendarSync} disabled={isGoogleSyncing} className={cn("w-full mt-3 bg-white border border-blue-200 text-blue-700 p-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-sm transition-all group", isGoogleSyncing ? "opacity-60 cursor-not-allowed" : "hover:bg-blue-50 active:scale-[0.98]")}>
-                <ArrowLeftRight className="group-hover:rotate-6 transition-transform" size={20} />
-                {isGoogleSyncing ? 'מסנכרן ליומן חדש...' : 'סנכרון אוטומטי ליומן חדש'}
-              </button>
-            {googleSyncStatus && <p className="text-center mt-2 text-[11px] text-blue-600 font-semibold">{googleSyncStatus}</p>}
-            <p className="text-center mt-3 text-[11px] text-slate-400 uppercase tracking-widest opacity-60">נפח משוער: 442 KB</p>
-           </div>
          </div>
 
          <div className="col-span-12 lg:col-span-7 flex flex-col h-full min-h-0">
-           <div className="h-[560px] lg:h-[calc(100vh-210px)] bg-slate-900 rounded-xl overflow-hidden shadow-2xl flex flex-col min-h-0">
-             <div className="bg-white/5 px-6 py-4 flex items-center justify-between border-b border-white/5">
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1.5">
-                   <div className="w-2.5 h-2.5 rounded-full bg-red-400/40"></div>
-                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-400/40"></div>
-                  <div className="w-2.5 h-2.5 rounded-full bg-green-400/40"></div>
-                </div>
-                 <span className="mr-4 text-[11px] font-bold text-slate-500 uppercase tracking-widest">תצוגה מקדימה של {selectedSchema.toUpperCase()}</span>
-               </div>
-               <button onClick={handleCopy} className="text-slate-500 hover:text-white transition-colors">
-                <Copy size={18} />
-              </button>
-            </div>
-             <div className="p-8 font-mono text-sm leading-relaxed text-blue-100/80 overflow-auto flex-1 min-h-0 text-left" dir="ltr">
-              <pre><code>{previews[selectedSchema]}</code></pre>
-            </div>
-            <div className="mt-auto bg-white/5 px-6 py-3 flex items-center gap-4 border-t border-white/5">
-               <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-               <span className="text-[10px] text-slate-500 font-medium">אימות בזמן אמת: המבנה תקין</span>
-            </div>
+           <div className="bg-white border border-slate-200 rounded-xl p-4 mb-4 text-right">
+             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">שם היומן בגוגל לסנכרון</label>
+             <input
+               type="text"
+               value={targetCalendarName}
+               onChange={(e) => setTargetCalendarName(e.target.value)}
+               disabled={isGoogleSyncing}
+               className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-sm text-right focus:ring-2 focus:ring-blue-500/20"
+               placeholder="למשל: HebrewCalendar משפחה"
+             />
+             <p className="mt-2 text-[10px] text-slate-500 leading-relaxed">אם יומן בשם הזה כבר קיים בחשבון שלך, תוצג אזהרה והיומן יימחק לחלוטין ויווצר מחדש לפני הסנכרון.</p>
+
+             <div className="mt-3 space-y-3">
+               <button onClick={handleDownload} className="w-full bg-gradient-to-r from-blue-600 to-blue-800 p-4 rounded-xl text-white font-bold flex items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-all group">
+                 <Download className="group-hover:translate-y-1 transition-transform" size={20} />
+                 בצע הורדת נתונים
+               </button>
+               <button onClick={handleGoogleCalendarSync} disabled={isGoogleSyncing} className={cn("w-full bg-white border border-blue-200 text-blue-700 p-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-sm transition-all group", isGoogleSyncing ? "opacity-60 cursor-not-allowed" : "hover:bg-blue-50 active:scale-[0.98]")}>
+                 <ArrowLeftRight className="group-hover:rotate-6 transition-transform" size={20} />
+                 {isGoogleSyncing ? 'מסנכרן ליומן חדש...' : 'סנכרון אוטומטי ליומן חדש'}
+               </button>
+               <button
+                 type="button"
+                 onClick={() => window.open(GOOGLE_CALENDAR_IMPORT_URL, '_blank', 'noopener,noreferrer')}
+                 className="w-full bg-slate-100 border border-slate-200 text-slate-700 p-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm transition-all hover:bg-slate-200 active:scale-[0.98]"
+               >
+                 <UploadCloud size={18} />
+                 פתח קיצור לעמוד הייבוא בגוגל
+               </button>
+             </div>
+
+             {googleSyncStatus && <p className="text-center mt-3 text-[11px] text-blue-600 font-semibold">{googleSyncStatus}</p>}
+             <p className="text-center mt-3 text-[11px] text-slate-400 uppercase tracking-widest opacity-60">נפח משוער: 442 KB</p>
            </div>
-          <div className="mt-6 flex gap-4 p-4 rounded-xl bg-blue-50 border border-blue-100 text-right">
+
+           <div className="mb-4 flex gap-4 p-4 rounded-xl bg-blue-50 border border-blue-100 text-right">
              <Info className="text-blue-600 shrink-0" size={20} />
              <p className="text-xs text-slate-600 leading-relaxed">
               <strong className="text-slate-900 block mb-1">הערת מפתח</strong>
-               כפתור הסנכרון האוטומטי מסנכרן לפי שם היומן שתגדיר. אם היומן כבר קיים - תוצג אזהרה, היומן יימחק ויווצר מחדש, ואז יתבצע ייבוא דרך Google Calendar API.
+               כפתור הסנכרון האוטומטי מסנכרן לפי שם היומן שתגדיר. אם היומן כבר קיים - תוצג אזהרה, היומן יימחק ויווצר מחדש, ואז יתבצע ייבוא דרך Google Calendar API. אם יש בעיות בסנכרון, אפשר תמיד לבצע הורדת קובץ ICS ולייבא אותו ידנית בעמוד הייבוא של Google Calendar דרך כפתור הקיצור.
              </p>
+           </div>
+
+           <div className="bg-slate-900 rounded-xl overflow-hidden shadow-2xl flex flex-col min-h-0">
+             <button
+               type="button"
+               onClick={() => setIsPreviewOpen(prev => !prev)}
+               className="bg-white/5 px-6 py-4 flex items-center justify-between border-b border-white/5 text-right"
+             >
+               <div className="flex items-center gap-2">
+                 <div className="flex gap-1.5">
+                   <div className="w-2.5 h-2.5 rounded-full bg-red-400/40"></div>
+                   <div className="w-2.5 h-2.5 rounded-full bg-yellow-400/40"></div>
+                   <div className="w-2.5 h-2.5 rounded-full bg-green-400/40"></div>
+                 </div>
+                 <span className="mr-4 text-[11px] font-bold text-slate-500 uppercase tracking-widest">תצוגה מקדימה של {selectedSchema.toUpperCase()}</span>
+               </div>
+               <div className="flex items-center gap-3">
+                 {isPreviewOpen && (
+                   <span
+                     role="button"
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       handleCopy();
+                     }}
+                     className="text-slate-500 hover:text-white transition-colors"
+                     aria-label="העתק תצוגה מקדימה"
+                     title="העתק תצוגה מקדימה"
+                   >
+                     <Copy size={18} />
+                   </span>
+                 )}
+                 <ChevronRight size={18} className={cn("text-slate-500 transition-transform", isPreviewOpen && "rotate-90")} />
+               </div>
+             </button>
+
+             {isPreviewOpen && (
+               <>
+                 <div className="h-[420px] p-8 font-mono text-sm leading-relaxed text-blue-100/80 overflow-auto text-left" dir="ltr">
+                   <pre><code>{previews[selectedSchema]}</code></pre>
+                 </div>
+                 <div className="mt-auto bg-white/5 px-6 py-3 flex items-center gap-4 border-t border-white/5">
+                   <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                   <span className="text-[10px] text-slate-500 font-medium">אימות בזמן אמת: המבנה תקין</span>
+                 </div>
+               </>
+             )}
            </div>
          </div>
       </div>
