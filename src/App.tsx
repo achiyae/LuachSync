@@ -37,6 +37,7 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterv
 import { he } from 'date-fns/locale';
 import { cn } from './lib/utils';
 import { CalendarEvent, EventType, ReminderMode } from './types';
+import HelpSupportView from './components/HelpSupportView';
 
 type GoogleTokenResponse = {
   access_token?: string;
@@ -285,10 +286,17 @@ const Sidebar = ({ activeTab, setActiveTab, isCollapsed, onToggleCollapse, isMob
 
       <div className="mt-auto border-t border-slate-200 pt-4 flex flex-col gap-1">
         <button
+          onClick={() => {
+            setActiveTab('support');
+            onCloseMobileMenu();
+          }}
           title="תמיכה"
           className={cn(
-            "flex items-center px-3 py-2 text-slate-600 hover:text-blue-600 hover:bg-slate-200 rounded-lg transition-all text-right w-full",
-            isCollapsed ? "justify-center" : "gap-3"
+            "flex items-center px-3 py-2 rounded-lg transition-all text-right w-full",
+            isCollapsed ? "justify-center" : "gap-3",
+            activeTab === 'support'
+              ? "bg-white text-blue-700 font-bold shadow-sm"
+              : "text-slate-600 hover:text-blue-600 hover:bg-slate-200"
           )}
         >
           <HelpCircle size={18} />
@@ -299,7 +307,7 @@ const Sidebar = ({ activeTab, setActiveTab, isCollapsed, onToggleCollapse, isMob
   );
 };
 
-const TopBar = ({ title, onOpenMobileMenu }: { title: string, onOpenMobileMenu: () => void }) => {
+const TopBar = ({ title, onOpenMobileMenu, onOpenSupport }: { title: string, onOpenMobileMenu: () => void, onOpenSupport: () => void }) => {
   return (
     <header className="w-full sticky top-0 z-40 bg-slate-50 flex justify-between items-center px-4 sm:px-6 py-3 border-b border-slate-200/50">
       <div className="flex items-center gap-4">
@@ -314,7 +322,12 @@ const TopBar = ({ title, onOpenMobileMenu }: { title: string, onOpenMobileMenu: 
         <h1 className="text-xl font-bold tracking-tight text-blue-900">{title}</h1>
       </div>
       <div className="flex items-center gap-4">
-        <button className="p-2 rounded-full hover:bg-slate-200/50 transition-colors text-slate-500">
+        <button
+          onClick={onOpenSupport}
+          title="תמיכה"
+          aria-label="תמיכה"
+          className="p-2 rounded-full hover:bg-slate-200/50 transition-colors text-slate-500"
+        >
           <HelpCircle size={20} />
         </button>
         <img 
@@ -2441,6 +2454,8 @@ export default function App() {
                />;
       case 'import-export':
         return <ImportExportView events={events} onImport={handleImportEvents} exportSettings={exportSettings} onExportSettingsChange={setExportSettings} />;
+      case 'support':
+        return <HelpSupportView />;
       default:
         return <DashboardView events={events} onAddClick={() => setActiveTab('add-event')} onEdit={handleEdit} onDelete={handleDelete} onClearAll={handleClearAll} />;
     }
@@ -2452,6 +2467,7 @@ export default function App() {
       case 'calendar': return 'לוח שנה';
       case 'add-event': return 'הוספת אירוע';
       case 'import-export': return 'ייצוא וייבוא';
+      case 'support': return 'תמיכה ועזרה';
       default: return 'HC4GC';
     }
   };
@@ -2479,7 +2495,14 @@ export default function App() {
         "flex-1 flex flex-col min-h-screen transition-all duration-300 mr-0",
         isSidebarCollapsed ? "md:mr-20" : "md:mr-64"
       )}>
-        <TopBar title={getTitle()} onOpenMobileMenu={() => setIsMobileMenuOpen(true)} />
+        <TopBar
+          title={getTitle()}
+          onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
+          onOpenSupport={() => {
+            setActiveTab('support');
+            setIsMobileMenuOpen(false);
+          }}
+        />
         
         <div className="flex-1 overflow-y-auto">
           <AnimatePresence mode="wait">
