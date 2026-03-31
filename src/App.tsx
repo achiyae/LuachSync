@@ -2036,7 +2036,7 @@ END:VCALENDAR`;
       let successfulSinceAdjust = 0;
       let rateLimitStrike = 0;
       let cooldownUntil = 0;
-      const minAllowedGapMs = isProdBuild ? 220 : 150;
+      const minAllowedGapMs = isProdBuild ? 280 : 150;
       const maxAllowedGapMs = 2000;
       let minRequestGapMs = minAllowedGapMs;
       let lastApiStartAt = 0;
