@@ -1709,6 +1709,7 @@ SUMMARY:${escapedSummary}
 CATEGORIES:${escapedCategory}
 X-HC4GC-ENTRY-TYPE:GENERATED
 TRANSP:TRANSPARENT
+X-MICROSOFT-CDO-BUSYSTATUS:FREE
 ${reminderSection}END:VEVENT`);
       } catch {
         // Skip invalid dates in years where the Hebrew date does not exist.
@@ -2014,7 +2015,9 @@ END:VCALENDAR`;
           const basePayload: Record<string, unknown> = {
             summary: syncEvent.summary,
             start: { date: startDate },
-            end: { date: endDate }
+            end: { date: endDate },
+            // Keep events as "available"/free in Google Calendar.
+            transparency: 'transparent'
           };
 
           const fullPayload: Record<string, unknown> = {
