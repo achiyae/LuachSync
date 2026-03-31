@@ -84,6 +84,18 @@ type GoogleSyncSummary = {
 
 const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
+class GoogleCalendarApiError extends Error {
+  status?: number;
+  retryAfterMs?: number;
+
+  constructor(message: string, status?: number, retryAfterMs?: number) {
+    super(message);
+    this.name = 'GoogleCalendarApiError';
+    this.status = status;
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
 declare global {
   interface Window {
     google?: {
@@ -1827,12 +1839,19 @@ END:VCALENDAR`;
 
         if (!response.ok) {
           const errorText = await response.text();
+          const retryAfterRaw = response.headers.get('retry-after');
+          const retryAfterSeconds = retryAfterRaw ? Number(retryAfterRaw) : NaN;
+          const retryAfterMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+            ? Math.floor(retryAfterSeconds * 1000)
+            : undefined;
+
           if (attempt < maxRetries && isRetryable(response.status, errorText)) {
-            const backoffMs = Math.min(8000, 350 * Math.pow(2, attempt)) + Math.floor(Math.random() * 250);
+            const exponentialBackoffMs = Math.min(20000, 900 * Math.pow(2, attempt)) + Math.floor(Math.random() * 600);
+            const backoffMs = Math.max(retryAfterMs || 0, exponentialBackoffMs);
             await sleep(backoffMs);
             continue;
           }
-          throw new Error(errorText || `Google Calendar API request failed for ${url}`);
+          throw new GoogleCalendarApiError(errorText || `Google Calendar API request failed for ${url}`, response.status, retryAfterMs);
         }
 
         if (response.status === 204) {
@@ -1848,7 +1867,7 @@ END:VCALENDAR`;
       } catch (error) {
         const isAbort = error instanceof DOMException && error.name === 'AbortError';
         if (attempt < maxRetries && isAbort) {
-          const backoffMs = Math.min(8000, 350 * Math.pow(2, attempt)) + Math.floor(Math.random() * 250);
+          const backoffMs = Math.min(20000, 900 * Math.pow(2, attempt)) + Math.floor(Math.random() * 600);
           await sleep(backoffMs);
           continue;
         }
@@ -1861,7 +1880,12 @@ END:VCALENDAR`;
     throw new Error(`Google Calendar API retries exhausted for ${url}`);
   };
 
-  const isRateLimitErrorMessage = (message: string) => /rateLimitExceeded|userRateLimitExceeded|quotaExceeded|429/i.test(message);
+  const isRateLimitErrorMessage = (message: string) => {
+    if (/rateLimitExceeded|userRateLimitExceeded|quotaExceeded/i.test(message)) {
+      return true;
+    }
+    return /\b429\b/.test(message);
+  };
 
   const findOwnedCalendarByName = async (accessToken: string, calendarName: string) => {
     let pageToken: string | undefined;
@@ -2004,41 +2028,56 @@ END:VCALENDAR`;
       let firstInsertPayload = '';
       const total = syncEventsForGoogle.length;
       const minConcurrency = 1;
-      const maxConcurrency = 8; // allow up to 8 maxConcurrency (up to 40 events per batch)
+      const maxConcurrency = 8;
       let adaptiveConcurrency = 2;
-      let pointer = 0;
+      let nextIndex = 0;
+      let completed = 0;
+      let successfulSinceAdjust = 0;
+      let rateLimitStrike = 0;
+      let cooldownUntil = 0;
 
-      while (pointer < total) {
-        const remaining = total - pointer;
-        // batchSize maxes out at maxConcurrency * 5 = 25 events
-        const batchSize = Math.min(remaining, adaptiveConcurrency * 5);
-        const batch = syncEventsForGoogle.slice(pointer, pointer + batchSize);
-        const batchStart = pointer + 1;
-        const batchEnd = pointer + batch.length;
+      const importOneGoogleEvent = async (syncEvent: GoogleSyncEvent) => {
+        const startDate = formatGoogleAllDayDate(syncEvent.eventDate);
+        const endDate = formatGoogleAllDayDate(addDays(syncEvent.eventDate, 1));
+        const basePayload: Record<string, unknown> = {
+          summary: syncEvent.summary,
+          start: { date: startDate },
+          end: { date: endDate },
+          // Keep events as "available"/free in Google Calendar.
+          transparency: 'transparent'
+        };
 
-        setGoogleSyncStatus(`מעלה אירועים ליומן "${calendarName}"... ${pointer}/${total} (batch ${batchStart}-${batchEnd}, concurrency ${adaptiveConcurrency})`);
+        const fullPayload: Record<string, unknown> = {
+          ...basePayload,
+          iCalUID: syncEvent.iCalUID,
+          ...(syncEvent.reminders.length > 0 ? { reminders: { useDefault: false, overrides: syncEvent.reminders } } : {})
+        };
 
-        const results = await Promise.all(batch.map(async (syncEvent) => {
-          const startDate = formatGoogleAllDayDate(syncEvent.eventDate);
-          const endDate = formatGoogleAllDayDate(addDays(syncEvent.eventDate, 1));
-          const basePayload: Record<string, unknown> = {
-            summary: syncEvent.summary,
-            start: { date: startDate },
-            end: { date: endDate },
-            // Keep events as "available"/free in Google Calendar.
-            transparency: 'transparent'
-          };
+        const fallbackPayload: Record<string, unknown> = {
+          ...basePayload,
+          iCalUID: syncEvent.iCalUID
+        };
 
-          const fullPayload: Record<string, unknown> = {
-            ...basePayload,
-            iCalUID: syncEvent.iCalUID,
-            ...(syncEvent.reminders.length > 0 ? { reminders: { useDefault: false, overrides: syncEvent.reminders } } : {})
-          };
-
-          const fallbackPayload: Record<string, unknown> = {
-            ...basePayload,
-            iCalUID: syncEvent.iCalUID
-          };
+        try {
+          await callGoogleCalendarApi(
+            accessToken,
+            `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/import`,
+            {
+              method: 'POST',
+              body: JSON.stringify(fullPayload)
+            }
+          );
+          return { ok: true as const };
+        } catch (firstError) {
+          const firstMessage = firstError instanceof Error ? firstError.message : 'Insert request failed.';
+          if (isRateLimitErrorMessage(firstMessage)) {
+            return {
+              ok: false as const,
+              rateLimited: true,
+              message: firstMessage,
+              payload: JSON.stringify({ fullPayload }, null, 2)
+            };
+          }
 
           try {
             await callGoogleCalendarApi(
@@ -2046,58 +2085,92 @@ END:VCALENDAR`;
               `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/import`,
               {
                 method: 'POST',
-                body: JSON.stringify(fullPayload)
+                body: JSON.stringify(fallbackPayload)
               }
             );
             return { ok: true as const };
-          } catch {
-            try {
-              await callGoogleCalendarApi(
-                accessToken,
-                `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/import`,
-                {
-                  method: 'POST',
-                  body: JSON.stringify(fallbackPayload)
-                }
-              );
-              return { ok: true as const };
-            } catch (retryError) {
-              const message = retryError instanceof Error ? retryError.message : 'Insert request failed.';
-              return {
-                ok: false as const,
-                rateLimited: isRateLimitErrorMessage(message),
-                message,
-                payload: JSON.stringify({ fullPayload, fallbackPayload }, null, 2)
-              };
-            }
+          } catch (retryError) {
+            const message = retryError instanceof Error ? retryError.message : 'Insert request failed.';
+            return {
+              ok: false as const,
+              rateLimited: isRateLimitErrorMessage(message),
+              message,
+              payload: JSON.stringify({ fullPayload, fallbackPayload }, null, 2)
+            };
           }
-        }));
+        }
+      };
 
-        const batchFailures = results.filter((result) => !result.ok);
-        const batchRateLimited = batchFailures.filter((result) => result.rateLimited).length;
+      const inFlight: Array<{ index: number; promise: Promise<Awaited<ReturnType<typeof importOneGoogleEvent>>> }> = [];
 
-        inserted += results.length - batchFailures.length;
-        failed += batchFailures.length;
-
-        if (!firstInsertError && batchFailures.length > 0) {
-          firstInsertError = batchFailures[0].message;
-          firstInsertPayload = batchFailures[0].payload;
+      const launchNext = () => {
+        if (nextIndex >= total) {
+          return;
         }
 
-        pointer += batch.length;
-        setGoogleSyncStatus(`מעלה אירועים ליומן "${calendarName}"... ${pointer}/${total} (concurrency ${adaptiveConcurrency})`);
+        const index = nextIndex;
+        nextIndex += 1;
+        inFlight.push({
+          index,
+          promise: importOneGoogleEvent(syncEventsForGoogle[index])
+        });
+      };
 
-        if (batchRateLimited > 0) {
-          adaptiveConcurrency = minConcurrency;
-          // To respect "Queries per minute" quota, sleep 25 seconds if we hit a rate limit.
-          setGoogleSyncStatus('ממתין להתאוששות ממגבלת הקצב של גוגל...');
-          await sleep(25000);
+      while (inFlight.length < adaptiveConcurrency && nextIndex < total) {
+        launchNext();
+      }
+
+      while (inFlight.length > 0) {
+        const finished = await Promise.race(
+          inFlight.map((entry, slot) => entry.promise.then((result) => ({ slot, index: entry.index, result })))
+        );
+
+        inFlight.splice(finished.slot, 1);
+        completed += 1;
+
+        if (finished.result.ok) {
+          inserted += 1;
+          successfulSinceAdjust += 1;
         } else {
-          if (batchFailures.length === 0 && adaptiveConcurrency < maxConcurrency) {
-            adaptiveConcurrency += 1;
+          failed += 1;
+
+          if (!firstInsertError) {
+            firstInsertError = finished.result.message;
+            firstInsertPayload = finished.result.payload;
           }
-          // Strict delay after each batch ensures we stay well below 10 requests per second (600/min quota)
-          await sleep(800);
+
+          if (finished.result.rateLimited) {
+            adaptiveConcurrency = Math.max(minConcurrency, Math.floor(adaptiveConcurrency / 2));
+            successfulSinceAdjust = 0;
+            rateLimitStrike = Math.min(rateLimitStrike + 1, 4);
+            const cooldownMs = Math.min(12000, 1500 * Math.pow(2, rateLimitStrike));
+            cooldownUntil = Date.now() + cooldownMs;
+          }
+        }
+
+        if (successfulSinceAdjust >= adaptiveConcurrency * 6 && adaptiveConcurrency < maxConcurrency) {
+          adaptiveConcurrency += 1;
+          successfulSinceAdjust = 0;
+          if (rateLimitStrike > 0) {
+            rateLimitStrike -= 1;
+          }
+        }
+
+        setGoogleSyncStatus(`מעלה אירועים ליומן "${calendarName}"... ${completed}/${total} (in-flight ${inFlight.length}/${adaptiveConcurrency})`);
+
+        const now = Date.now();
+        if (cooldownUntil > now) {
+          setGoogleSyncStatus('ממתין להתאוששות ממגבלת הקצב של גוגל...');
+          await sleep(cooldownUntil - now);
+          cooldownUntil = 0;
+        }
+
+        while (inFlight.length < adaptiveConcurrency && nextIndex < total) {
+          launchNext();
+        }
+
+        if (inFlight.length > 0) {
+          await sleep(40);
         }
       }
 
