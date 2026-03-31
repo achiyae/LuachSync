@@ -1660,9 +1660,6 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
     const eventReminderMode = getEventReminderMode(e);
     const eventReminderRules = getEventReminderRules(e);
     const eventDate = resolveEventGregorianDate(e);
-    const dtStart = formatIcsDate(eventDate);
-    const dtEnd = formatIcsDate(addDays(eventDate, 1));
-    const dtStamp = formatIcsUtcDateTime(new Date());
     const escapedSummary = escapeIcsText(e.title);
     const escapedCategory = escapeIcsText(e.type);
     const icsReminders = buildIcsReminders(e.title, eventDate, eventReminderRules);
@@ -1670,9 +1667,6 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
 
     return `BEGIN:VEVENT
 UID:${exportBaseId}@hc4gc-source
-DTSTAMP:${dtStamp}
-DTSTART;VALUE=DATE:${dtStart}
-DTEND;VALUE=DATE:${dtEnd}
 SUMMARY:${escapedSummary}
 CATEGORIES:${escapedCategory}
 X-HC4GC-ENTRY-TYPE:SOURCE
