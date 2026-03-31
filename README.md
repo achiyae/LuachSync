@@ -45,10 +45,6 @@ See the standalone policy: [PRIVACY.md](PRIVACY.md)
 3. Run the app:
    `npm run dev`
 
-## Google Calendar Auto Sync Setup
-
-This app can create a new Google Calendar programmatically and upload events into it.
-
 ### 1. Google Cloud Console
 
 1. Create or select a Google Cloud project.
