@@ -2000,13 +2000,14 @@ END:VCALENDAR`;
       let firstInsertPayload = '';
       const total = syncEventsForGoogle.length;
       const minConcurrency = 1;
-      const maxConcurrency = 16;
-      let adaptiveConcurrency = 3;
+      const maxConcurrency = 8; // allow up to 8 maxConcurrency (up to 40 events per batch)
+      let adaptiveConcurrency = 2;
       let pointer = 0;
 
       while (pointer < total) {
         const remaining = total - pointer;
-        const batchSize = Math.min(remaining, adaptiveConcurrency * 8);
+        // batchSize maxes out at maxConcurrency * 5 = 25 events
+        const batchSize = Math.min(remaining, adaptiveConcurrency * 5);
         const batch = syncEventsForGoogle.slice(pointer, pointer + batchSize);
         const batchStart = pointer + 1;
         const batchEnd = pointer + batch.length;
@@ -2081,10 +2082,16 @@ END:VCALENDAR`;
         setGoogleSyncStatus(`מעלה אירועים ליומן "${calendarName}"... ${pointer}/${total} (concurrency ${adaptiveConcurrency})`);
 
         if (batchRateLimited > 0) {
-          adaptiveConcurrency = Math.max(minConcurrency, adaptiveConcurrency - 1);
-          await sleep(600 + batchRateLimited * 250);
-        } else if (batchFailures.length === 0 && adaptiveConcurrency < maxConcurrency) {
-          adaptiveConcurrency += 1;
+          adaptiveConcurrency = minConcurrency;
+          // To respect "Queries per minute" quota, sleep 25 seconds if we hit a rate limit.
+          setGoogleSyncStatus('ממתין להתאוששות ממגבלת הקצב של גוגל...');
+          await sleep(25000);
+        } else {
+          if (batchFailures.length === 0 && adaptiveConcurrency < maxConcurrency) {
+            adaptiveConcurrency += 1;
+          }
+          // Strict delay after each batch ensures we stay well below 10 requests per second (600/min quota)
+          await sleep(800);
         }
       }
 
