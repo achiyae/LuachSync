@@ -1666,10 +1666,18 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
     const icsReminders = buildIcsReminders(e.title, eventDate, eventReminderRules);
     const reminderSection = icsReminders ? `${icsReminders}\n` : '';
 
+    const dtStart = formatIcsDate(eventDate);
+    const dtEnd = formatIcsDate(addDays(eventDate, 1));
+    const dtStamp = formatIcsUtcDateTime(new Date());
+
     return `BEGIN:VEVENT
 UID:${exportBaseId}@hc4gc-source
+DTSTAMP:${dtStamp}
+DTSTART;VALUE=DATE:${dtStart}
+DTEND;VALUE=DATE:${dtEnd}
 SUMMARY:${escapedSummary}
 CATEGORIES:${escapedCategory}
+TRANSP:TRANSPARENT
 X-HC4GC-ENTRY-TYPE:SOURCE
 X-HEBREW-DATE:${e.hebrewDate.day} ${e.hebrewDate.month} ${e.hebrewDate.year}
 X-AFTER-SUNSET:${e.hebrewDate.afterSunset ? 'true' : 'false'}
@@ -1737,7 +1745,7 @@ END:VCALENDAR`;
   const previews = { ics: icsPreview };
 
   const downloadIcsFile = (fileName?: string) => {
-    const content = previews.ics;
+    const content = previews.ics.replace(/\r?\n/g, '\r\n');
     const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
