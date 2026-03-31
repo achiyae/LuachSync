@@ -2214,48 +2214,82 @@ END:VCALENDAR`;
          </div>
 
          <div className="col-span-12 lg:col-span-7 flex flex-col h-full min-h-0">
-           <div className="bg-white border border-slate-200 rounded-xl p-4 mb-4 text-right">
-             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">שם היומן בגוגל לסנכרון</label>
-             <input
-               type="text"
-               value={targetCalendarName}
-               onChange={(e) => setTargetCalendarName(e.target.value)}
-               disabled={isGoogleSyncing}
-               className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-sm text-right focus:ring-2 focus:ring-blue-500/20"
-               placeholder="למשל: HebrewCalendar משפחה"
-             />
-             <p className="mt-2 text-[10px] text-slate-500 leading-relaxed">אם יומן בשם הזה כבר קיים בחשבון שלך, תוצג אזהרה והיומן יימחק לחלוטין ויווצר מחדש לפני הסנכרון.</p>
+           <div className="space-y-4 mb-4">
+             <section className="bg-white border border-slate-200 rounded-xl p-5 text-right">
+               <h3 className="text-base font-bold text-slate-900">סנכרון אוטומטי עם יומן גוגל</h3>
+               <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                 זו הדרך הקלה ביותר לסנכרון עם יומן גוגל.
+               </p>
 
-             <div className="mt-3 space-y-3">
-               <button onClick={handleDownload} className="w-full bg-gradient-to-r from-blue-600 to-blue-800 p-4 rounded-xl text-white font-bold flex items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-all group">
-                 <Download className="group-hover:translate-y-1 transition-transform" size={20} />
-                 בצע הורדת נתונים
-               </button>
-               <button onClick={handleGoogleCalendarSync} disabled={isGoogleSyncing} className={cn("w-full bg-white border border-blue-200 text-blue-700 p-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-sm transition-all group", isGoogleSyncing ? "opacity-60 cursor-not-allowed" : "hover:bg-blue-50 active:scale-[0.98]")}>
+               <div className="mt-4">
+                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">שם היומן בגוגל לסנכרון</label>
+                 <input
+                   type="text"
+                   value={targetCalendarName}
+                   onChange={(e) => setTargetCalendarName(e.target.value)}
+                   disabled={isGoogleSyncing}
+                   className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-sm text-right focus:ring-2 focus:ring-blue-500/20"
+                   placeholder="למשל: HebrewCalendar משפחה"
+                 />
+               </div>
+
+               <button onClick={handleGoogleCalendarSync} disabled={isGoogleSyncing} className={cn("mt-4 w-full bg-gradient-to-r from-blue-600 to-blue-800 p-4 rounded-xl text-white font-bold flex items-center justify-center gap-3 shadow-lg transition-all group", isGoogleSyncing ? "opacity-60 cursor-not-allowed" : "active:scale-[0.98]")}>
                  <ArrowLeftRight className="group-hover:rotate-6 transition-transform" size={20} />
                  {isGoogleSyncing ? 'מסנכרן ליומן חדש...' : 'סנכרון אוטומטי ליומן חדש'}
                </button>
-               <button
-                 type="button"
-                 onClick={() => window.open(GOOGLE_CALENDAR_IMPORT_URL, '_blank', 'noopener,noreferrer')}
-                 className="w-full bg-slate-100 border border-slate-200 text-slate-700 p-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm transition-all hover:bg-slate-200 active:scale-[0.98]"
-               >
-                 <UploadCloud size={18} />
-                 פתח קיצור לעמוד הייבוא בגוגל
-               </button>
-             </div>
 
-             {googleSyncStatus && <p className="text-center mt-3 text-[11px] text-blue-600 font-semibold">{googleSyncStatus}</p>}
-             <p className="text-center mt-3 text-[11px] text-slate-400 uppercase tracking-widest opacity-60">נפח משוער: 442 KB</p>
+               {googleSyncStatus && <p className="text-center mt-3 text-[11px] text-blue-600 font-semibold">{googleSyncStatus}</p>}
+
+               <div className="mt-4 flex gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-right">
+                 <Info className="text-amber-700 shrink-0" size={18} />
+                 <p className="text-xs text-amber-900 leading-relaxed">
+                   גישה זו יוצרת יומן חדש בשם שייבחר. אם כבר קיים יומן בשם הזה, הוא יימחק קודם.<br/>
+                   בגלל מגבלות של גוגל, התהליך לוקח בערך דקה לכל אירוע.
+                 </p>
+               </div>
+             </section>
+
+             <section className="bg-white border border-slate-200 rounded-xl p-5 text-right">
+               <h3 className="text-base font-bold text-slate-900">סנכרון ידני ליומן גוגל ולשירותי יומן נוספים</h3>
+               <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                 גישה זו מעט מורכבת כי היא דורשת כמה שלבים מצד המשתמש, אבל תהליך הייבוא עצמו מהיר מאוד.
+               </p>
+
+               <div className="mt-4 rounded-lg bg-slate-50 border border-slate-200 p-4">
+                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">שלבים</p>
+                 <ol className="list-decimal list-inside space-y-1 text-sm text-slate-700 leading-relaxed">
+                   <li>צרו יומן חדש באפליקציית היומן שלכם.</li>
+                   <li>לחצו על הכפתור למטה להורדת קובץ ICS.</li>
+                   <li>ייבאו את קובץ ה-ICS אל היומן החדש שיצרתם. במידה וזה יומן של גוגל, לחצו על הכפתור להלן.</li>
+                 </ol>
+               </div>
+
+               <div className="mt-4 space-y-3">
+                 <button onClick={handleDownload} className="w-full bg-white border border-blue-200 text-blue-700 p-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-sm transition-all group hover:bg-blue-50 active:scale-[0.98]">
+                   <Download className="group-hover:translate-y-1 transition-transform" size={20} />
+                   הורדת קובץ ICS
+                 </button>
+                 <button
+                   type="button"
+                   onClick={() => window.open(GOOGLE_CALENDAR_IMPORT_URL, '_blank', 'noopener,noreferrer')}
+                   className="w-full bg-slate-100 border border-slate-200 text-slate-700 p-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm transition-all hover:bg-slate-200 active:scale-[0.98]"
+                 >
+                   <UploadCloud size={18} />
+                   פתח קיצור לעמוד הייבוא בגוגל
+                 </button>
+               </div>
+
+               <div className="mt-4 flex gap-3 p-3 rounded-lg bg-rose-50 border border-rose-200 text-right">
+                 <Info className="text-rose-700 shrink-0" size={18} />
+                 <p className="text-xs text-rose-900 leading-relaxed">
+                   חשוב לייבא את האירועים האלה ליומן נקי ולא לערבב אותם עם היומן הרגיל שלכם. <br/>
+                   אם תרצו לעשות בהמשך שינויים באירועים - יש למחוק את היומן ולבצע את התהליך מחדש.
+                 </p>
+               </div>
+             </section>
            </div>
 
-           <div className="mb-4 flex gap-4 p-4 rounded-xl bg-blue-50 border border-blue-100 text-right">
-             <Info className="text-blue-600 shrink-0" size={20} />
-             <p className="text-xs text-slate-600 leading-relaxed">
-              <strong className="text-slate-900 block mb-1">הערת מפתח</strong>
-               כפתור הסנכרון האוטומטי מסנכרן לפי שם היומן שתגדיר. אם היומן כבר קיים - תוצג אזהרה, היומן יימחק ויווצר מחדש, ואז יתבצע ייבוא דרך Google Calendar API. אם יש בעיות בסנכרון, אפשר תמיד לבצע הורדת קובץ ICS ולייבא אותו ידנית בעמוד הייבוא של Google Calendar דרך כפתור הקיצור.
-             </p>
-           </div>
+           <p className="text-center mb-4 text-[11px] text-slate-400 uppercase tracking-widest opacity-60">נפח משוער: 442 KB</p>
 
            <div className="bg-slate-900 rounded-xl overflow-hidden shadow-2xl flex flex-col min-h-0">
              <button
@@ -2595,7 +2629,7 @@ export default function App() {
           </AnimatePresence>
         </div>
 
-        <footer className="w-full mt-auto py-4 border-t border-slate-200 bg-slate-50 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center px-4 sm:px-8">
+        {/* <footer className="w-full mt-auto py-4 border-t border-slate-200 bg-slate-50 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center px-4 sm:px-8">
           <div className="text-slate-400 font-inter text-[11px] uppercase tracking-widest">
             © 2024 HC4GC • מערכת פעילה
           </div>
@@ -2604,7 +2638,7 @@ export default function App() {
             <button className="text-slate-400 hover:text-blue-800 font-inter text-[11px] uppercase tracking-widest transition-colors opacity-80 hover:opacity-100">פרטיות</button>
             <button className="text-slate-400 hover:text-blue-800 font-inter text-[11px] uppercase tracking-widest transition-colors opacity-80 hover:opacity-100">תנאים</button>
           </div>
-        </footer>
+        </footer> */}
       </main>
 
       {/* Floating Action Button */}
