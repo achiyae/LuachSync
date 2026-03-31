@@ -1317,6 +1317,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
   const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
   const GOOGLE_CALENDAR_IMPORT_URL = 'https://calendar.google.com/calendar/u/0/r/settings/export';
+  const GOOGLE_CALENDAR_CREATE_URL = 'https://calendar.google.com/calendar/u/0/r/settings/createcalendar';
   const selectedSchema = exportSettings.selectedSchema;
   const reminderMode = exportSettings.reminderMode;
   const uniqueEventTypes = useMemo(() => Array.from(new Set(events.map(e => e.type))), [events]);
@@ -2258,9 +2259,33 @@ END:VCALENDAR`;
                <div className="mt-4 rounded-lg bg-slate-50 border border-slate-200 p-4">
                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">שלבים</p>
                  <ol className="list-decimal list-inside space-y-1 text-sm text-slate-700 leading-relaxed">
-                   <li>צרו יומן חדש באפליקציית היומן שלכם.</li>
+                   <li>
+                     צרו יומן חדש באפליקציית היומן שלכם
+                     {' '}
+                     <a
+                       href={GOOGLE_CALENDAR_CREATE_URL}
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       className="text-blue-700 underline decoration-blue-300 hover:text-blue-800"
+                     >
+                       (יצירת יומן בגוגל)
+                     </a>
+                     .
+                   </li>
                    <li>לחצו על הכפתור למטה להורדת קובץ ICS.</li>
-                   <li>ייבאו את קובץ ה-ICS אל היומן החדש שיצרתם. במידה וזה יומן של גוגל, לחצו על הכפתור להלן.</li>
+                   <li>
+                     ייבאו את קובץ ה-ICS אל היומן החדש שיצרתם
+                     {' '}
+                     <a
+                       href={GOOGLE_CALENDAR_IMPORT_URL}
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       className="text-blue-700 underline decoration-blue-300 hover:text-blue-800"
+                     >
+                       (לעמוד הייבוא בגוגל)
+                     </a>
+                     .
+                   </li>
                  </ol>
                </div>
 
@@ -2268,14 +2293,6 @@ END:VCALENDAR`;
                  <button onClick={handleDownload} className="w-full bg-white border border-blue-200 text-blue-700 p-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-sm transition-all group hover:bg-blue-50 active:scale-[0.98]">
                    <Download className="group-hover:translate-y-1 transition-transform" size={20} />
                    הורדת קובץ ICS
-                 </button>
-                 <button
-                   type="button"
-                   onClick={() => window.open(GOOGLE_CALENDAR_IMPORT_URL, '_blank', 'noopener,noreferrer')}
-                   className="w-full bg-slate-100 border border-slate-200 text-slate-700 p-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm transition-all hover:bg-slate-200 active:scale-[0.98]"
-                 >
-                   <UploadCloud size={18} />
-                   פתח קיצור לעמוד הייבוא בגוגל
                  </button>
                </div>
 
