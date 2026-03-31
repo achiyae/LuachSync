@@ -2027,14 +2027,39 @@ END:VCALENDAR`;
       let firstInsertError = '';
       let firstInsertPayload = '';
       const total = syncEventsForGoogle.length;
+      const isProdBuild = import.meta.env.PROD;
       const minConcurrency = 1;
-      const maxConcurrency = 4;
-      let adaptiveConcurrency = 2;
+      const maxConcurrency = isProdBuild ? 3 : 4;
+      let adaptiveConcurrency = isProdBuild ? 1 : 2;
       let nextIndex = 0;
       let completed = 0;
       let successfulSinceAdjust = 0;
       let rateLimitStrike = 0;
       let cooldownUntil = 0;
+      const minAllowedGapMs = isProdBuild ? 220 : 150;
+      const maxAllowedGapMs = 2000;
+      let minRequestGapMs = minAllowedGapMs;
+      let lastApiStartAt = 0;
+      let requestStartLock: Promise<void> = Promise.resolve();
+
+      const waitForApiStartSlot = async () => {
+        const previousLock = requestStartLock;
+        let releaseLock: () => void = () => undefined;
+        requestStartLock = new Promise<void>((resolve) => {
+          releaseLock = resolve;
+        });
+
+        await previousLock;
+        try {
+          const waitMs = Math.max(0, lastApiStartAt + minRequestGapMs - Date.now());
+          if (waitMs > 0) {
+            await sleep(waitMs);
+          }
+          lastApiStartAt = Date.now();
+        } finally {
+          releaseLock();
+        }
+      };
 
       const importOneGoogleEvent = async (syncEvent: GoogleSyncEvent) => {
         const startDate = formatGoogleAllDayDate(syncEvent.eventDate);
@@ -2059,6 +2084,7 @@ END:VCALENDAR`;
         };
 
         try {
+          await waitForApiStartSlot();
           await callGoogleCalendarApi(
             accessToken,
             `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/import`,
@@ -2080,6 +2106,7 @@ END:VCALENDAR`;
           }
 
           try {
+            await waitForApiStartSlot();
             await callGoogleCalendarApi(
               accessToken,
               `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/import`,
@@ -2143,9 +2170,14 @@ END:VCALENDAR`;
             adaptiveConcurrency = Math.max(minConcurrency, Math.floor(adaptiveConcurrency / 2));
             successfulSinceAdjust = 0;
             rateLimitStrike = Math.min(rateLimitStrike + 1, 4);
-            const cooldownMs = Math.min(12000, 1500 * Math.pow(2, rateLimitStrike));
+            minRequestGapMs = Math.min(maxAllowedGapMs, Math.floor(minRequestGapMs * 1.35) + 40);
+            const cooldownMs = Math.min(20000, 2000 * Math.pow(2, rateLimitStrike));
             cooldownUntil = Date.now() + cooldownMs;
           }
+        }
+
+        if (finished.result.ok && successfulSinceAdjust % 5 === 0) {
+          minRequestGapMs = Math.max(minAllowedGapMs, minRequestGapMs - 10);
         }
 
         if (successfulSinceAdjust >= adaptiveConcurrency * 6 && adaptiveConcurrency < maxConcurrency) {
@@ -2156,7 +2188,7 @@ END:VCALENDAR`;
           }
         }
 
-        setGoogleSyncStatus(`מעלה אירועים ליומן "${calendarName}"... ${completed}/${total} (in-flight ${inFlight.length}/${adaptiveConcurrency})`);
+        setGoogleSyncStatus(`מעלה אירועים ליומן "${calendarName}"... ${completed}/${total} (in-flight ${inFlight.length}/${adaptiveConcurrency}, gap ${minRequestGapMs}ms)`);
 
         const now = Date.now();
         if (cooldownUntil > now) {
