@@ -2393,18 +2393,7 @@ END:VCALENDAR`;
 export default function App() {
   const APP_STORAGE_KEY = 'hc4gc.appState.v1';
   const LEGACY_EVENTS_STORAGE_KEY = 'hc4gc.events.v1';
-  const getInitialTab = () => {
-    const path = window.location.pathname;
-    if (path.endsWith('/privacy') || path.endsWith('/privacy/')) return 'privacy';
-    return 'dashboard';
-  };
-  const [activeTab, setActiveTab] = useState(getInitialTab);
-  const navigateTo = (tab: string) => {
-    setActiveTab(tab);
-    const base = window.location.pathname.replace(/\/(privacy)\/?$/, '').replace(/\/$/, '');
-    const newPath = tab === 'privacy' ? base + '/privacy' : base + '/';
-    window.history.pushState(null, '', newPath);
-  };
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [appState, setAppState] = useState<PersistedAppState>(() => {
     try {
       const raw = window.localStorage.getItem(APP_STORAGE_KEY);
@@ -2458,15 +2447,6 @@ export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const onPopState = () => {
-      const path = window.location.pathname;
-      setActiveTab(path.endsWith('/privacy') || path.endsWith('/privacy/') ? 'privacy' : 'dashboard');
-    };
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-  }, []);
-
-  useEffect(() => {
     try {
       window.localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(appState));
     } catch {
@@ -2488,12 +2468,12 @@ export default function App() {
     } else {
       setEvents([...events, newEvent]);
     }
-    navigateTo('dashboard');
+    setActiveTab('dashboard');
   };
 
   const handleEdit = (evt: CalendarEvent) => {
     setEditingEvent(evt);
-    navigateTo('add-event');
+    setActiveTab('add-event');
   };
 
   const handleDelete = (id: string) => {
@@ -2510,7 +2490,7 @@ export default function App() {
     if (window.confirm('למחוק את כל האירועים מהרשימה?')) {
       setEvents([]);
       setEditingEvent(null);
-      navigateTo('dashboard');
+      setActiveTab('dashboard');
     }
   };
 
@@ -2529,7 +2509,7 @@ export default function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardView events={events} onAddClick={() => navigateTo('add-event')} onEdit={handleEdit} onDelete={handleDelete} onClearAll={handleClearAll} />;
+        return <DashboardView events={events} onAddClick={() => setActiveTab('add-event')} onEdit={handleEdit} onDelete={handleDelete} onClearAll={handleClearAll} />;
       case 'calendar':
         return <CalendarView events={events} />;
       case 'add-event':
@@ -2539,7 +2519,7 @@ export default function App() {
                  onSave={handleSaveEvent} 
                  onCancel={() => {
                    setEditingEvent(null);
-                   navigateTo('dashboard');
+                   setActiveTab('dashboard');
                  }} 
                />;
       case 'import-export':
@@ -2549,7 +2529,7 @@ export default function App() {
       case 'privacy':
         return <PrivacyView />;
       default:
-        return <DashboardView events={events} onAddClick={() => navigateTo('add-event')} onEdit={handleEdit} onDelete={handleDelete} onClearAll={handleClearAll} />;
+        return <DashboardView events={events} onAddClick={() => setActiveTab('add-event')} onEdit={handleEdit} onDelete={handleDelete} onClearAll={handleClearAll} />;
     }
   };
 
@@ -2577,7 +2557,7 @@ export default function App() {
 
       <Sidebar
         activeTab={activeTab}
-        setActiveTab={navigateTo}
+        setActiveTab={setActiveTab}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
         isMobileMenuOpen={isMobileMenuOpen}
@@ -2592,7 +2572,7 @@ export default function App() {
           title={getTitle()}
           onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
           onOpenSupport={() => {
-            navigateTo('support');
+            setActiveTab('support');
             setIsMobileMenuOpen(false);
           }}
         />
