@@ -5,6 +5,8 @@
 # HC4GC
 Hebrew Calendar for Google Calendar
 
+The app is deployed at https://hc4gc.elyasaf.net/
+
 ## What This App Does
 
 HC4GC is designed for recurring Hebrew-date events (for example birthdays, yahrzeits, anniversaries, and memorial dates) and turns them into Gregorian calendar events that can be used in standard calendar systems like Google Calendar.
