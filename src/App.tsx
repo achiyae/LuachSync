@@ -2318,7 +2318,7 @@ END:VCALENDAR`;
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-x-3 bottom-3 sm:inset-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[30rem] z-[71] bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 text-right"
+              className="fixed inset-x-3 bottom-3 sm:inset-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[30rem] z-[71] bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 text-right max-h-[90vh] overflow-y-auto"
               dir="rtl"
             >
               <div className="flex items-start justify-between gap-3 mb-3">
@@ -2344,24 +2344,24 @@ END:VCALENDAR`;
               </div>
 
               {googleSyncSummary.firstInsertError && (
-                <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900 leading-relaxed break-words">
-                  <strong className="font-bold block mb-1">שגיאת ההזנה הראשונה</strong>
-                  {googleSyncSummary.firstInsertError}
-                </div>
+                <details className="mt-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900 leading-relaxed break-words group cursor-pointer marker:text-amber-500">
+                  <summary className="font-bold outline-none group-hover:text-amber-700 transition-colors">שגיאת ההזנה הראשונה</summary>
+                  <div className="mt-2 text-amber-800">{googleSyncSummary.firstInsertError}</div>
+                </details>
               )}
 
               {googleSyncSummary.firstInsertPayload && (
-                <div className="mt-3 rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 text-xs text-slate-700 leading-relaxed break-words">
-                  <strong className="font-bold block mb-1">Payload של ניסיון ההזנה הראשון</strong>
-                  <pre className="whitespace-pre-wrap text-[11px]">{googleSyncSummary.firstInsertPayload}</pre>
-                </div>
+                <details className="mt-3 rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 text-xs text-slate-700 leading-relaxed break-words group cursor-pointer marker:text-slate-500">
+                  <summary className="font-bold outline-none group-hover:text-slate-900 transition-colors">Payload של ניסיון ההזנה הראשון</summary>
+                  <pre className="whitespace-pre-wrap text-[11px] mt-2 bg-white p-2 rounded border border-slate-100">{googleSyncSummary.firstInsertPayload}</pre>
+                </details>
               )}
 
               {googleSyncSummary.firstDeleteError && (
-                <div className="mt-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900 leading-relaxed break-words">
-                  <strong className="font-bold block mb-1">שגיאת המחיקה הראשונה</strong>
-                  {googleSyncSummary.firstDeleteError}
-                </div>
+                <details className="mt-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900 leading-relaxed break-words group cursor-pointer marker:text-amber-500">
+                  <summary className="font-bold outline-none group-hover:text-amber-700 transition-colors">שגיאת המחיקה הראשונה</summary>
+                  <div className="mt-2 text-amber-800">{googleSyncSummary.firstDeleteError}</div>
+                </details>
               )}
 
               <div className="mt-5 flex gap-2">
