@@ -1644,7 +1644,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
             type: event.type,
             eventDate: hd.greg(),
             reminders,
-            iCalUID: `${exportBaseId}-${targetHebrewYear}-${i}@hc4gc-import`
+            iCalUID: `${exportBaseId}-${i}@hc4gc-import`
           });
         } catch {
           // Skip years where this Hebrew date does not exist.
@@ -1707,7 +1707,7 @@ ${reminderSection}END:VEVENT`;
         const reminderSection = icsReminders ? `${icsReminders}\n` : '';
 
         eventsForHundredYears.push(`BEGIN:VEVENT
-UID:${exportBaseId}-${targetHebrewYear}-${occurrence}@hc4gc
+UID:${exportBaseId}-${occurrence}@hc4gc
 DTSTAMP:${dtStamp}
 DTSTART;VALUE=DATE:${dtStart}
 DTEND;VALUE=DATE:${dtEnd}
