@@ -2028,7 +2028,7 @@ END:VCALENDAR`;
       let firstInsertPayload = '';
       const total = syncEventsForGoogle.length;
       const minConcurrency = 1;
-      const maxConcurrency = 5;
+      const maxConcurrency = 4;
       let adaptiveConcurrency = 2;
       let nextIndex = 0;
       let completed = 0;
