@@ -5,6 +5,25 @@
 # HC4GC
 Hebrew Calendar for Google Calendar
 
+## What This App Does
+
+HC4GC is designed for recurring Hebrew-date events (for example birthdays, yahrzeits, anniversaries, and memorial dates) and turns them into Gregorian calendar events that can be used in standard calendar systems like Google Calendar.
+
+The app workflow is:
+
+1. You enter an event using a Hebrew date (for example: 1 Nisan 5740).
+2. The app calculates the corresponding Gregorian date for each yearly recurrence.
+3. It repeats this calculation for a long planning range (up to 100 years).
+4. It generates the full list of Gregorian events (first occurrence, second, third, and so on).
+5. You can then either:
+   - Export the events to an ICS file, or
+   - Use automatic Google sync to create a dedicated calendar and upload all generated events.
+
+Example:
+
+- If you enter a Hebrew birthday such as 1 Nisan 5740, HC4GC computes when that birthday falls each year in the Gregorian calendar and creates the recurring series for up to 100 years.
+- With Google sync, HC4GC creates a new calendar in your Google account and inserts those calculated Gregorian birthday events into that calendar.
+
 ## Public Privacy Policy
 
 See the standalone policy: [PRIVACY.md](PRIVACY.md)
