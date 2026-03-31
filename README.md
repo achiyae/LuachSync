@@ -58,8 +58,7 @@ See the standalone policy: [PRIVACY.md](PRIVACY.md)
 Add these under Authorized JavaScript origins:
 
 1. Local dev: `http://localhost:3000`
-2. GitHub Pages origin: `https://achiyae.github.io`
-3. Your app URL `https://achiyae.github.io/HebrewCalendar/` is covered by that origin (path is not added in origin settings).
+2. GitHub Pages origin: e.g., `https://achiyae.github.io`
 
 ### 2.1 Existing Calendar Behavior
 
