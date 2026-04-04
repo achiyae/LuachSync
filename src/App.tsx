@@ -987,6 +987,7 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
               <div className="space-y-2">
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">שנה עברית</label>
                 <input 
+                  data-testid="add-event-hebrew-year"
                   className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm text-right"
                   placeholder="תשפ״ו"
                   value={formData.yearStr}

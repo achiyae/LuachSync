@@ -25,7 +25,7 @@ describe('Add event e2e flow', () => {
     await user.selectOptions(monthSelect, 'תשרי');
     await user.selectOptions(daySelect, '1');
 
-    const yearInput = screen.getByPlaceholderText('תשפ״ו');
+    const yearInput = screen.getByTestId('add-event-hebrew-year');
     await user.clear(yearInput);
     await user.type(yearInput, 'תש"פ');
 
