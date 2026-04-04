@@ -2535,10 +2535,10 @@ END:VCALENDAR`;
               <div className="mt-5 flex gap-2">
                 <button
                   type="button"
-                  onClick={() => window.open(`https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent(googleSyncSummary.calendarId)}`, '_blank', 'noopener,noreferrer')}
+                  onClick={() => window.open('https://calendar.google.com/calendar/u/0/r', '_blank', 'noopener,noreferrer')}
                   className="flex-1 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors"
                 >
-                  פתח את היומן בגוגל
+                  פתח את יומן גוגל
                 </button>
                 <button
                   type="button"
