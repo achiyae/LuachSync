@@ -519,12 +519,18 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
                 const monthName = event.nextOccur.getMonthName();
                 const monthLabel = hebrewMonthsMap[monthName] || event.nextOccur.getMonthName('h') || monthName;
                 return (
-                <div key={event.id} className={cn("group p-6 rounded-xl transition-all flex items-start gap-6 border shadow-sm", isToday ? "bg-blue-50 border-blue-200" : "bg-white border-transparent hover:bg-slate-50 hover:border-slate-200")}>
+                <div
+                  key={event.id}
+                  data-testid="dashboard-event-card"
+                  className={cn("group p-6 rounded-xl transition-all flex items-start gap-6 border shadow-sm", isToday ? "bg-blue-50 border-blue-200" : "bg-white border-transparent hover:bg-slate-50 hover:border-slate-200")}
+                >
                   <div className={cn(
                     "flex flex-col items-center justify-center w-20 h-20 rounded-lg shrink-0",
                     event.type === 'yahrzeit' ? "bg-purple-100 text-purple-800" : 
                     event.type === 'birthday' ? "bg-orange-100 text-orange-800" : "bg-blue-100 text-blue-800"
-                  )}>
+                  )}
+                    data-testid="dashboard-event-date-badge"
+                  >
                     <span className="text-[10px] font-bold leading-none">{event.type === 'yahrzeit' ? 'יום זיכרון' : event.type === 'birthday' ? 'יום הולדת' : event.type === 'anniversary' ? 'יום נישואין' : event.type}</span>
                     <span className="text-[10px] font-semibold mt-1 leading-none">{monthLabel}</span>
                     <span className="text-2xl font-extrabold mt-1 leading-none">{gematriya(event.nextOccur.getDate()) || event.hebrewDate.day}</span>

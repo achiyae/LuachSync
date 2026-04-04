@@ -38,12 +38,12 @@ describe('Add event e2e flow', () => {
 
     await user.click(screen.getByRole('button', { name: 'לוח בקרה' }));
 
-    const eventTitle = await screen.findByText('ישראל ישראלי');
-    const eventCard = eventTitle.closest('div.group');
+    await screen.findByText('ישראל ישראלי');
 
-    expect(eventCard).not.toBeNull();
+    const allEventCards = screen.getAllByTestId('dashboard-event-card');
+    expect(allEventCards).toHaveLength(1);
 
-    const card = eventCard as HTMLElement;
+    const card = allEventCards[0];
     expect(within(card).getByText('ישראל ישראלי')).toBeInTheDocument();
     expect(within(card).getAllByText('יום הולדת')).toHaveLength(2);
     expect(within(card).getByText('תאריך מקורי:')).toBeInTheDocument();
@@ -52,15 +52,9 @@ describe('Add event e2e flow', () => {
     const originalDateTags = screen.getAllByText('תאריך מקורי:');
     expect(originalDateTags).toHaveLength(1);
 
-    const dateBadge = card.querySelector('div.w-20.h-20');
-    expect(dateBadge).not.toBeNull();
-
-    const badge = dateBadge as HTMLElement;
+    const badge = within(card).getByTestId('dashboard-event-date-badge');
     expect(within(badge).getByText('יום הולדת')).toBeInTheDocument();
     expect(within(badge).getByText('תשרי')).toBeInTheDocument();
     expect(within(badge).getByText(/א.?/)).toBeInTheDocument();
-
-    const allEventCards = document.querySelectorAll('div.group.p-6.rounded-xl');
-    expect(allEventCards).toHaveLength(1);
   });
 });
