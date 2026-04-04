@@ -446,7 +446,7 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
       <div className="flex justify-between items-end">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500 mb-1 font-semibold">השקפה יומית</p>
-          <h2 className="text-4xl font-bold text-slate-900">{hDate.renderGematriya()}</h2>
+          <h2 data-testid="dashboard-daily-hebrew-date" className="text-4xl font-bold text-slate-900">{hDate.renderGematriya()}</h2>
           <p className="text-slate-500 font-medium">
             {format(selectedDate, 'EEEE, d MMMM yyyy', { locale: he })} • פרשת {getSedra(hDate.getFullYear(), false).lookup(hDate)?.parsha?.join('-') || 'אין פרשה'}
           </p>
@@ -595,20 +595,20 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
         </div>
 
         <div className="col-span-12 lg:col-span-4 space-y-6">
-          <div className="bg-blue-50 p-6 rounded-xl space-y-4 border border-blue-100">
+          <div data-testid="dashboard-mini-calendar" className="bg-blue-50 p-6 rounded-xl space-y-4 border border-blue-100">
             <div className="flex justify-between items-center">
               <div className="flex gap-1 bg-blue-100/50 p-1 rounded-lg">
-                <button onClick={() => setCalendarMonth(subMonths(calendarMonth, 1))} className="p-1 hover:bg-white rounded-md transition-colors text-slate-500 hover:text-blue-600 shadow-sm">
+                <button data-testid="mini-calendar-prev-month" onClick={() => setCalendarMonth(subMonths(calendarMonth, 1))} className="p-1 hover:bg-white rounded-md transition-colors text-slate-500 hover:text-blue-600 shadow-sm">
                   <ChevronRight size={16} />
                 </button>
-                <button onClick={() => { setCalendarMonth(new Date()); setSelectedDate(new Date()); }} className="px-2 py-1 font-bold text-[11px] hover:bg-white rounded-md transition-colors text-slate-500 hover:text-blue-600 shadow-sm">
+                <button data-testid="mini-calendar-today" onClick={() => { setCalendarMonth(new Date()); setSelectedDate(new Date()); }} className="px-2 py-1 font-bold text-[11px] hover:bg-white rounded-md transition-colors text-slate-500 hover:text-blue-600 shadow-sm">
                   היום
                 </button>
-                <button onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))} className="p-1 hover:bg-white rounded-md transition-colors text-slate-500 hover:text-blue-600 shadow-sm">
+                <button data-testid="mini-calendar-next-month" onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))} className="p-1 hover:bg-white rounded-md transition-colors text-slate-500 hover:text-blue-600 shadow-sm">
                   <ChevronLeft size={16} />
                 </button>
               </div>
-              <h4 className="font-bold text-blue-900" dir="ltr">{format(calendarMonth, 'MMMM yyyy', { locale: he })} / {getHebrewMonthSpan(calendarMonth)}</h4>
+              <h4 data-testid="dashboard-mini-calendar-month" className="font-bold text-blue-900" dir="ltr">{format(calendarMonth, 'MMMM yyyy', { locale: he })} / {getHebrewMonthSpan(calendarMonth)}</h4>
             </div>
             <div className="grid grid-cols-7 gap-2 text-center" dir="rtl">
               {['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'].map(day => (
@@ -633,6 +633,7 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
                 return (
                   <button 
                     key={i} 
+                    data-testid={`mini-calendar-day-${format(date, 'yyyy-MM-dd')}`}
                     onClick={() => setSelectedDate(date)}
                     className={cn(
                       "text-xs py-1 rounded-full cursor-pointer hover:bg-blue-200 transition-colors relative flex flex-col items-center justify-center h-8 w-8 mx-auto",
@@ -641,7 +642,7 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
                   >
                     <span className="leading-none">{format(date, 'd')}</span>
                     {hasEvent && (
-                      <span className={cn("absolute bottom-1 w-1 h-1 rounded-full", isSelected ? "bg-white" : "bg-blue-600")} />
+                      <span data-testid="mini-calendar-day-dot" className={cn("absolute bottom-1 w-1 h-1 rounded-full", isSelected ? "bg-white" : "bg-blue-600")} />
                     )}
                   </button>
                 );

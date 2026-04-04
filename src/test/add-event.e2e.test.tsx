@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
+import { addEventFromForm, getDashboardEventCards, getDashboardEventDateBadge, openDashboard } from './e2e-helpers';
 
 describe('Add event e2e flow', () => {
   beforeEach(() => {
@@ -13,34 +14,25 @@ describe('Add event e2e flow', () => {
 
     render(<App />);
 
-    await user.click(screen.getByRole('button', { name: 'הוספת אירוע' }));
-
-    await screen.findByRole('heading', { name: 'רישום אירוע חדש במעגל החיים' });
-
-    const titleInput = screen.getByPlaceholderText('לדוגמה: אברהם בן תרח');
-    await user.clear(titleInput);
-    await user.type(titleInput, 'ישראל ישראלי');
-
-    const [monthSelect, daySelect, timeSelect] = screen.getAllByRole('combobox');
-    await user.selectOptions(monthSelect, 'תשרי');
-    await user.selectOptions(daySelect, '1');
-
-    const yearInput = screen.getByTestId('add-event-hebrew-year');
-    await user.clear(yearInput);
-    await user.type(yearInput, 'תש"פ');
-
-    await user.selectOptions(timeSelect, 'before');
+    await addEventFromForm(user, {
+      title: 'ישראל ישראלי',
+      month: 'תשרי',
+      day: 1,
+      hebrewYear: 'תש"פ',
+      time: 'before',
+      save: false,
+    });
 
     expect(screen.getByText('סיכום תצוגה מקדימה')).toBeInTheDocument();
     expect(screen.getByText('תאריך לועזי מחושב: 30 ספטמבר 2019')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'שמירת אירוע' }));
 
-    await user.click(screen.getByRole('button', { name: 'לוח בקרה' }));
+    await openDashboard(user);
 
     await screen.findByText('ישראל ישראלי');
 
-    const allEventCards = screen.getAllByTestId('dashboard-event-card');
+    const allEventCards = getDashboardEventCards();
     expect(allEventCards).toHaveLength(1);
 
     const card = allEventCards[0];
@@ -52,7 +44,7 @@ describe('Add event e2e flow', () => {
     const originalDateTags = screen.getAllByText('תאריך מקורי:');
     expect(originalDateTags).toHaveLength(1);
 
-    const badge = within(card).getByTestId('dashboard-event-date-badge');
+    const badge = getDashboardEventDateBadge(card);
     expect(within(badge).getByText('יום הולדת')).toBeInTheDocument();
     expect(within(badge).getByText('תשרי')).toBeInTheDocument();
     expect(within(badge).getByText(/א.?/)).toBeInTheDocument();
