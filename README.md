@@ -1,7 +1,8 @@
 # HC4GC
+
 Hebrew Calendar for Google Calendar
 
-The app is deployed at https://hc4gc.elyasaf.net/
+The app is deployed at <https://hc4gc.elyasaf.net/>
 
 ## What This App Does
 
@@ -26,21 +27,21 @@ Example:
 
 See the standalone policy: [PRIVACY.md](PRIVACY.md)
 
-
 ## Run Locally
 
 **Prerequisites:**  Node.js
 
-
 1. Install dependencies:
    `npm install`
 2. Create `.env.local` and set your keys:
+
    ```bash
    VITE_GOOGLE_CLIENT_ID=your_google_oauth_client_id
    ```
+
 3. `VITE_GOOGLE_CLIENT_ID` is required for automatic Google Calendar sync (create new calendar + upload events).
 4. Do not put OAuth Client Secret or service-account private keys in this project.
-3. Run the app:
+5. Run the app:
    `npm run dev`
 
 ### 1. Google Cloud Console
