@@ -37,6 +37,19 @@ import { HDate, Zmanim, Location, HebrewCalendar, getSedra, gematriya, gematriya
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addDays, getDay } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { cn } from './lib/utils';
+import {
+  hebrewMonthsMap,
+
+  hebrewToEnglishMonth,
+  buildReminderRules,
+  getEventTypeLabel,
+  getEventTypeSyncLabel,
+  escapeIcsText,
+  normalizeImportedUid,
+  normalizeExportBaseId,
+  getHebrewMonthSpan,
+  type ReminderRule,
+} from './lib/helpers';
 import { CalendarEvent, EventType, ReminderMode } from './types';
 import HelpSupportView from './components/HelpSupportView';
 import PrivacyView from './components/PrivacyView';
@@ -114,36 +127,6 @@ declare global {
 }
 
 // --- Helpers ---
-const hebrewMonthsMap: Record<string, string> = {
-    'Nisan': 'ניסן', 'Iyyar': 'אייר', 'Sivan': 'סיוון', 'Tamuz': 'תמוז', 'Av': 'אב', 'Elul': 'אלול',
-    'Tishrei': 'תשרי', 'Cheshvan': 'חשוון', 'Heshvan': 'חשוון', 'Kislev': 'כסלו', 'Tevet': 'טבת', 
-    'Shvat': 'שבט', "Sh'vat": 'שבט', 'Adar 1': 'אדר א׳', 'Adar I': 'אדר א׳', 'Adar 2': 'אדר ב׳', 'Adar II': 'אדר ב׳', 'Adar': 'אדר'
-};
-
-const hebrewMonthsRev: Record<string, string> = {
-  'Nisan': 'ניסן', 'Iyyar': 'אייר', 'Sivan': 'סיוון', 'Tamuz': 'תמוז', 'Av': 'אב', 'Elul': 'אלול',
-  'Tishrei': 'תשרי', 'Cheshvan': 'חשוון', 'Heshvan': 'חשוון', 'Kislev': 'כסלו', 'Tevet': 'טבת',
-  'Shvat': 'שבט', "Sh'vat": 'שבט', 'Adar 1': 'אדר א׳', 'Adar I': 'אדר א׳', 'Adar 2': 'אדר ב׳', 'Adar II': 'אדר ב׳', 'Adar': 'אדר'
-};
-
-const hebrewToEnglishMonth: Record<string, string> = {
-  'ניסן': 'Nisan',
-  'אייר': 'Iyyar',
-  'סיוון': 'Sivan',
-  'תמוז': 'Tamuz',
-  'אב': 'Av',
-  'אלול': 'Elul',
-  'תשרי': 'Tishrei',
-  'חשוון': 'Cheshvan',
-  'כסלו': 'Kislev',
-  'טבת': 'Tevet',
-  'שבט': 'Shvat',
-  'אדר': 'Adar 1',
-  'אדר א׳': 'Adar 1',
-  'אדר ב׳': 'Adar 2'
-};
-
-type ReminderRule = { id: string; label: string; trigger: string; time?: string };
 
 type ExportSettingsState = {
   selectedSchema: 'ics';
@@ -174,63 +157,6 @@ const REMINDER_MODE_OPTIONS: Array<{ id: ReminderMode; label: string; desc: stri
   { id: 'week-before', label: 'שבוע לפני', desc: 'עוקף את ברירת המחדל של הייצוא עבור האירוע הזה בלבד.' },
   { id: 'both', label: 'גם שבוע לפני וגם יום לפני ב-19:00', desc: 'עוקף את ברירת המחדל של הייצוא עבור האירוע הזה בלבד.' }
 ];
-
-const buildReminderRules = (mode: ReminderMode): ReminderRule[] => {
-  switch (mode) {
-    case 'day-before':
-      return [{ id: 'day_before_19', label: 'יום לפני בשעה 19:00', trigger: '-P1D', time: '19:00' }];
-    case 'week-before':
-      return [{ id: 'week_before', label: 'שבוע לפני', trigger: '-P7D' }];
-    case 'both':
-      return [
-        { id: 'day_before_19', label: 'יום לפני בשעה 19:00', trigger: '-P1D', time: '19:00' },
-        { id: 'week_before', label: 'שבוע לפני', trigger: '-P7D' }
-      ];
-    default:
-      return [];
-  }
-};
-
-const getEventTypeLabel = (type: string) => {
-  if (type === 'yahrzeit') return 'ימי זיכרון';
-  if (type === 'birthday') return 'ימי הולדת';
-  if (type === 'anniversary') return 'ימי נישואין';
-  return type;
-};
-
-const getEventTypeSyncLabel = (type: string) => {
-  if (type === 'yahrzeit') return 'יום זיכרון';
-  if (type === 'birthday') return 'יום הולדת';
-  if (type === 'anniversary') return 'יום נישואין';
-  return type;
-};
-
-const escapeIcsText = (value: string) => value
-  .replace(/\\/g, '\\\\')
-  .replace(/;/g, '\\;')
-  .replace(/,/g, '\\,')
-  .replace(/\r?\n/g, '\\n');
-
-const normalizeImportedUid = (uid: string) => uid.replace(/(?:@hc4gc-source)+$/, '');
-
-const normalizeExportBaseId = (id: string) => id.replace(/(?:@hc4gc-source)+$/, '');
-
-const getHebrewMonthSpan = (date: Date) => {
-    const startH = new HDate(startOfMonth(date));
-    const endH = new HDate(endOfMonth(date));
-    const startHStr = hebrewMonthsMap[startH.getMonthName()] || startH.getMonthName();
-    const endHStr = hebrewMonthsMap[endH.getMonthName()] || endH.getMonthName();
-    const startYStr = gematriya(startH.getFullYear());
-    const endYStr = gematriya(endH.getFullYear());
-    
-    if (startHStr === endHStr) {
-      return `${startHStr} ${startYStr}`;
-    }
-    if (startYStr === endYStr) {
-      return `${startHStr}-${endHStr} ${startYStr}`;
-    }
-    return `${startHStr} ${startYStr} - ${endHStr} ${endYStr}`;
-};
 
 // --- Components ---
 
@@ -591,7 +517,7 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
                       ? 'גם שבוע לפני וגם יום לפני ב-19:00'
                       : 'ללא תזכורות';
                 const monthName = event.nextOccur.getMonthName();
-                const monthLabel = hebrewMonthsRev[monthName] || event.nextOccur.getMonthName('h') || monthName;
+                const monthLabel = hebrewMonthsMap[monthName] || event.nextOccur.getMonthName('h') || monthName;
                 return (
                 <div key={event.id} className={cn("group p-6 rounded-xl transition-all flex items-start gap-6 border shadow-sm", isToday ? "bg-blue-50 border-blue-200" : "bg-white border-transparent hover:bg-slate-50 hover:border-slate-200")}>
                   <div className={cn(
@@ -800,7 +726,7 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
 
       return {
         day: hd.getDate(),
-        month: hebrewMonthsRev[hd.getMonthName()] || hd.getMonthName(),
+        month: hebrewMonthsMap[hd.getMonthName()] || hd.getMonthName(),
         yearStr: gematriya(hd.getFullYear())
       };
     } catch {
@@ -898,11 +824,11 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
             
             return {
                 title: 'תאריך עברי מחושב',
-                value: `${gematriya(hd.getDate())} ב${hebrewMonthsRev[hd.getMonthName()] || hd.getMonthName()} ${gematriya(hd.getFullYear())}`,
+                value: `${gematriya(hd.getDate())} ב${hebrewMonthsMap[hd.getMonthName()] || hd.getMonthName()} ${gematriya(hd.getFullYear())}`,
                 sedra: getSedra(hd.getFullYear(), true).lookup(hd)?.parsha?.join('-') || 'אין פרשה',
                 hd: hd,
                 previewDayStr: gematriya(hd.getDate()),
-                previewMonthStr: hebrewMonthsRev[hd.getMonthName()] || hd.getMonthName()
+                previewMonthStr: hebrewMonthsMap[hd.getMonthName()] || hd.getMonthName()
             };
         } catch {
             return { title: 'תאריך עברי מחושב', value: 'תאריך לא חוקי', sedra: '', hd: null, previewDayStr: '', previewMonthStr: '' };
@@ -928,7 +854,7 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
       type: formData.type === 'other' ? formData.customType.trim() : formData.type,
       hebrewDate: {
         day: d,
-        month: hebrewMonthsRev[m] || 'ניסן',
+        month: hebrewMonthsMap[m] || 'ניסן',
         year: y,
         afterSunset: formData.afterSunset
       },

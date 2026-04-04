@@ -1,0 +1,76 @@
+import { HDate, gematriya } from '@hebcal/core';
+import { startOfMonth, endOfMonth } from 'date-fns';
+import { ReminderMode } from '../types';
+
+export type ReminderRule = { id: string; label: string; trigger: string; time?: string };
+
+export const hebrewMonthsMap: Record<string, string> = {
+  'Nisan': 'ניסן', 'Iyyar': 'אייר', 'Sivan': 'סיוון', 'Tamuz': 'תמוז', 'Av': 'אב', 'Elul': 'אלול',
+  'Tishrei': 'תשרי', 'Cheshvan': 'חשוון', 'Heshvan': 'חשוון', 'Kislev': 'כסלו', 'Tevet': 'טבת',
+  'Shvat': 'שבט', "Sh'vat": 'שבט', 'Adar 1': 'אדר א׳', 'Adar I': 'אדר א׳', 'Adar 2': 'אדר ב׳', 'Adar II': 'אדר ב׳', 'Adar': 'אדר'
+};
+
+export const hebrewToEnglishMonth: Record<string, string> = {
+  'ניסן': 'Nisan', 'אייר': 'Iyyar', 'סיוון': 'Sivan', 'תמוז': 'Tamuz', 'אב': 'Av', 'אלול': 'Elul',
+  'תשרי': 'Tishrei', 'חשוון': 'Cheshvan', 'כסלו': 'Kislev', 'טבת': 'Tevet', 'שבט': 'Shvat',
+  'אדר': 'Adar 1', 'אדר א׳': 'Adar 1', 'אדר ב׳': 'Adar 2'
+};
+
+export const buildReminderRules = (mode: ReminderMode): ReminderRule[] => {
+  switch (mode) {
+    case 'day-before':
+      return [{ id: 'day_before_19', label: 'יום לפני בשעה 19:00', trigger: '-P1D', time: '19:00' }];
+    case 'week-before':
+      return [{ id: 'week_before', label: 'שבוע לפני', trigger: '-P7D' }];
+    case 'both':
+      return [
+        { id: 'day_before_19', label: 'יום לפני בשעה 19:00', trigger: '-P1D', time: '19:00' },
+        { id: 'week_before', label: 'שבוע לפני', trigger: '-P7D' }
+      ];
+    default:
+      return [];
+  }
+};
+
+export const getEventTypeLabel = (type: string): string => {
+  if (type === 'yahrzeit') return 'ימי זיכרון';
+  if (type === 'birthday') return 'ימי הולדת';
+  if (type === 'anniversary') return 'ימי נישואין';
+  return type;
+};
+
+export const getEventTypeSyncLabel = (type: string): string => {
+  if (type === 'yahrzeit') return 'יום זיכרון';
+  if (type === 'birthday') return 'יום הולדת';
+  if (type === 'anniversary') return 'יום נישואין';
+  return type;
+};
+
+export const escapeIcsText = (value: string): string => value
+  .replace(/\\/g, '\\\\')
+  .replace(/;/g, '\\;')
+  .replace(/,/g, '\\,')
+  .replace(/\r?\n/g, '\\n');
+
+export const normalizeImportedUid = (uid: string): string =>
+  uid.replace(/(?:@hc4gc-source)+$/, '');
+
+export const normalizeExportBaseId = (id: string): string =>
+  id.replace(/(?:@hc4gc-source)+$/, '');
+
+export const getHebrewMonthSpan = (date: Date): string => {
+  const startH = new HDate(startOfMonth(date));
+  const endH = new HDate(endOfMonth(date));
+  const startHStr = hebrewMonthsMap[startH.getMonthName()] || startH.getMonthName();
+  const endHStr = hebrewMonthsMap[endH.getMonthName()] || endH.getMonthName();
+  const startYStr = gematriya(startH.getFullYear());
+  const endYStr = gematriya(endH.getFullYear());
+
+  if (startHStr === endHStr) {
+    return `${startHStr} ${startYStr}`;
+  }
+  if (startYStr === endYStr) {
+    return `${startHStr}-${endHStr} ${startYStr}`;
+  }
+  return `${startHStr} ${startYStr} - ${endHStr} ${endYStr}`;
+};
