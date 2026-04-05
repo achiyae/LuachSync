@@ -16,6 +16,62 @@ export const hebrewToEnglishMonth: Record<string, string> = {
   'אדר': 'Adar 1', 'אדר א׳': 'Adar 1', 'אדר ב׳': 'Adar 2'
 };
 
+const hebrewOnes = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט'];
+const hebrewTens = ['', 'י', 'כ', 'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ'];
+const hebrewHundreds = ['', 'ק', 'ר', 'ש', 'ת'];
+
+export const toHebrewNumeral = (value: number): string => {
+  if (!Number.isFinite(value) || value <= 0) {
+    return `${value}`;
+  }
+
+  let remaining = Math.floor(value);
+  let numeral = '';
+
+  // Hebrew years are usually written without the thousands digit.
+  if (remaining >= 5000) {
+    remaining -= 5000;
+  }
+
+  while (remaining >= 400) {
+    numeral += 'ת';
+    remaining -= 400;
+  }
+
+  if (remaining >= 100) {
+    const hundreds = Math.floor(remaining / 100);
+    numeral += hebrewHundreds[hundreds];
+    remaining %= 100;
+  }
+
+  // Avoid יה/יו for 15/16 and use טו/טז per Hebrew convention.
+  if (remaining === 15) {
+    numeral += 'טו';
+    remaining = 0;
+  } else if (remaining === 16) {
+    numeral += 'טז';
+    remaining = 0;
+  } else if (remaining >= 10) {
+    const tens = Math.floor(remaining / 10);
+    numeral += hebrewTens[tens];
+    remaining %= 10;
+  }
+
+  if (remaining > 0) {
+    numeral += hebrewOnes[remaining];
+  }
+
+  if (!numeral) {
+    return `${value}`;
+  }
+
+  if (numeral.length === 1) {
+    return `${numeral}'`;
+  }
+
+  return `${numeral.slice(0, -1)}"${numeral.slice(-1)}`;
+};
+
 export const buildReminderRules = (mode: ReminderMode): ReminderRule[] => {
   switch (mode) {
     case 'day-before':

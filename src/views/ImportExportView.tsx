@@ -12,6 +12,7 @@ import {
   hebrewToEnglishMonth,
   normalizeExportBaseId,
   normalizeImportedUid,
+  toHebrewNumeral,
   type ReminderRule,
 } from '../lib/helpers';
 import { CalendarEvent, ReminderMode } from '../types';
@@ -29,6 +30,7 @@ type GoogleTokenClient = {
 
 type GoogleSyncEvent = {
   summary: string;
+  description: string;
   type: string;
   eventDate: Date;
   reminders: Array<{ method: 'popup'; minutes: number }>;
@@ -359,6 +361,18 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
     }
   };
 
+  const buildGeneratedEventDescription = (event: CalendarEvent) => {
+    const originalGregorianDate = resolveEventGregorianDate(event);
+    const hebrewDay = toHebrewNumeral(event.hebrewDate.day);
+    const hebrewYear = toHebrewNumeral(event.hebrewDate.year);
+
+    return [
+      'אירוע זה נוצר אוטומטית על בסיס אירוע מקור עם תאריך עברי קבוע.',
+      `תאריך עברי: ${hebrewDay} ${event.hebrewDate.month} ${hebrewYear}`,
+      `תאריך לועזי: ${format(originalGregorianDate, 'dd/MM/yyyy')}`,
+    ].join('\n');
+  };
+
   const toGoogleReminderMinutes = (rule: ReminderRule) => {
     if (rule.id === 'day_before_19') {
       // For an all-day event (00:00), 19:00 on the previous day is 300 minutes before start.
@@ -395,6 +409,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
       const month = hebrewToEnglishMonth[event.hebrewDate.month] || 'Nisan';
       const eventTypeLabel = getEventTypeSyncLabel(event.type);
       const exportBaseId = normalizeExportBaseId(event.id);
+      const description = buildGeneratedEventDescription(event);
 
       for (let i = 0; i < 100; i++) {
         const targetHebrewYear = event.hebrewDate.year + i;
@@ -402,6 +417,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
           const hd = new HDate(event.hebrewDate.day, month, targetHebrewYear);
           generated.push({
             summary: `${eventTypeLabel} ל${event.title} (${i})`,
+            description,
             type: event.type,
             eventDate: hd.greg(),
             reminders,
@@ -451,6 +467,7 @@ ${reminderSection}END:VEVENT`;
     const eventReminderRules = getEventReminderRules(e);
     const eventTypeLabel = getEventTypeSyncLabel(e.type);
     const month = hebrewToEnglishMonth[e.hebrewDate.month] || 'Nisan';
+    const description = buildGeneratedEventDescription(e);
     const eventsForHundredYears: string[] = [];
 
     for (let i = 0; i < 100; i++) {
@@ -465,6 +482,7 @@ ${reminderSection}END:VEVENT`;
         const dtStamp = formatIcsUtcDateTime(new Date());
         const summary = `${eventTypeLabel} ל${e.title} (${occurrence})`;
         const escapedSummary = escapeIcsText(summary);
+        const escapedDescription = escapeIcsText(description);
         const escapedCategory = escapeIcsText(e.type);
         const icsReminders = buildIcsReminders(summary, eventDate, eventReminderRules);
         const reminderSection = icsReminders ? `${icsReminders}\n` : '';
@@ -475,6 +493,7 @@ DTSTAMP:${dtStamp}
 DTSTART;VALUE=DATE:${dtStart}
 DTEND;VALUE=DATE:${dtEnd}
 SUMMARY:${escapedSummary}
+DESCRIPTION:${escapedDescription}
 CATEGORIES:${escapedCategory}
 X-HC4GC-ENTRY-TYPE:GENERATED
 TRANSP:TRANSPARENT
@@ -941,6 +960,7 @@ END:VCALENDAR`;
         const endDate = formatGoogleAllDayDate(addDays(syncEvent.eventDate, 1));
         const basePayload: Record<string, unknown> = {
           summary: syncEvent.summary,
+          description: syncEvent.description,
           start: { date: startDate },
           end: { date: endDate },
           // Keep events as "available"/free in Google Calendar.
