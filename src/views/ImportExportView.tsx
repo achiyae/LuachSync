@@ -53,6 +53,7 @@ type GoogleSyncSummary = {
   deleteFailed: number;
   inserted: number;
   failed: number;
+  durationMs: number;
   firstInsertError?: string;
   firstDeleteError?: string;
   firstInsertPayload?: string;
@@ -633,6 +634,25 @@ END:VCALENDAR`;
     return /\b429\b/.test(message);
   };
 
+  const formatDuration = (durationMs: number) => {
+    const clampedMs = Math.max(0, Math.floor(durationMs));
+    const totalSeconds = Math.floor(clampedMs / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      const remainingMinutes = Math.floor((totalSeconds % 3600) / 60);
+      return `${hours}:${String(remainingMinutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')} שעות`;
+    }
+
+    if (minutes === 0) {
+      return `${seconds} שניות`;
+    }
+
+    return `${minutes}:${String(seconds).padStart(2, '0')} דקות`;
+  };
+
   const findOwnedCalendarByName = async (accessToken: string, calendarName: string) => {
     let pageToken: string | undefined;
     const normalizedTarget = calendarName.trim().toLowerCase();
@@ -697,6 +717,8 @@ END:VCALENDAR`;
       alert('נא להזין שם יומן לסנכרון.');
       return;
     }
+
+    const syncStartedAt = Date.now();
 
     setGoogleSyncSummary(null);
     setIsGoogleSyncing(true);
@@ -961,6 +983,7 @@ END:VCALENDAR`;
         deleteFailed,
         inserted,
         failed,
+        durationMs: Date.now() - syncStartedAt,
         firstInsertError,
         firstDeleteError,
         firstInsertPayload
@@ -1255,6 +1278,7 @@ END:VCALENDAR`;
                 <div className="flex justify-between"><span>אירועים שנכשלו בהזנה</span><span className="font-bold text-amber-700">{googleSyncSummary.failed}</span></div>
                 <div className="flex justify-between"><span>יומנים שנמחקו לפני הסנכרון</span><span className="font-bold">{googleSyncSummary.deleted}</span></div>
                 <div className="flex justify-between"><span>כשלים במחיקת יומן</span><span className="font-bold text-amber-700">{googleSyncSummary.deleteFailed}</span></div>
+                <div className="flex justify-between"><span>זמן סנכרון</span><span className="font-bold">{formatDuration(googleSyncSummary.durationMs)}</span></div>
               </div>
 
               {googleSyncSummary.firstInsertError && (
