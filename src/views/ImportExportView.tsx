@@ -1148,6 +1148,7 @@ END:VCALENDAR`;
 
       <div className="grid grid-cols-12 gap-6 items-start">
         <div className="col-span-12 lg:col-span-5 space-y-6">
+
           <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-right">
             <div className="flex items-center gap-3 mb-6">
                <ArrowLeftRight className="text-blue-600" size={20} />
@@ -1208,24 +1209,39 @@ END:VCALENDAR`;
            </section>
 
           <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-right">
-             <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-4">
               <ArrowLeftRight className="text-blue-600" size={20} />
-              <h3 className="font-bold text-lg">ייבוא נתונים</h3>
+              <h3 className="font-bold text-lg">סנכרון אוטומטי עם יומן גוגל</h3>
             </div>
-            <div 
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={handleFileDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-200 rounded-xl p-8 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
-               <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <UploadCloud className="text-blue-600" size={24} />
-              </div>
-              <p className="text-sm font-bold text-slate-900 mb-1">גרור קובץ ICS לכאן</p>
-               <p className="text-[10px] text-slate-500 mb-4">או לחץ לבחירת קובץ מהמחשב</p>
-              <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors pointer-events-none">
-                 בחר קובץ
-               </button>
-               <input type="file" ref={fileInputRef} className="hidden" accept=".ics" onChange={handleFileSelect} />
+            <p className="text-sm text-slate-600 leading-relaxed text-right">
+              זו הדרך הקלה ביותר לסנכרון עם יומן גוגל.
+            </p>
+
+            <div className="mt-4">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">שם היומן בגוגל לסנכרון</label>
+              <input
+                type="text"
+                value={targetCalendarName}
+                onChange={(e) => setTargetCalendarName(e.target.value)}
+                disabled={isGoogleSyncing}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-sm text-right focus:ring-2 focus:ring-blue-500/20"
+                placeholder="למשל: HebrewCalendar משפחה"
+              />
+            </div>
+
+            <button onClick={handleGoogleCalendarSync} disabled={isGoogleSyncing} className={cn("mt-4 w-full bg-gradient-to-r from-blue-600 to-blue-800 p-4 rounded-xl text-white font-bold flex items-center justify-center gap-3 shadow-lg transition-all group", isGoogleSyncing ? "opacity-60 cursor-not-allowed" : "active:scale-[0.98]")}>
+              <ArrowLeftRight className="group-hover:rotate-6 transition-transform" size={20} />
+              {isGoogleSyncing ? 'מסנכרן ליומן חדש...' : 'סנכרון אוטומטי ליומן חדש'}
+            </button>
+
+            {googleSyncStatus && <p className="text-center mt-3 text-[11px] text-blue-600 font-semibold">{googleSyncStatus}</p>}
+
+            <div className="mt-4 flex gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-right">
+              <Info className="text-amber-700 shrink-0" size={18} />
+              <p className="text-xs text-amber-900 leading-relaxed">
+                גישה זו יוצרת יומן חדש בשם שייבחר. אם כבר קיים יומן בשם הזה, הוא יימחק קודם.<br/>
+                בגלל מגבלות של גוגל, התהליך לוקח בערך דקה לכל אירוע.
+              </p>
             </div>
            </section>
 
@@ -1233,92 +1249,40 @@ END:VCALENDAR`;
 
          <div className="col-span-12 lg:col-span-7 flex flex-col h-full min-h-0">
            <div className="space-y-4 mb-4">
-             <section className="bg-white border border-slate-200 rounded-xl p-5 text-right">
-               <h3 className="text-base font-bold text-slate-900">סנכרון אוטומטי עם יומן גוגל</h3>
-               <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-                 זו הדרך הקלה ביותר לסנכרון עם יומן גוגל.
-               </p>
-
-               <div className="mt-4">
-                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">שם היומן בגוגל לסנכרון</label>
-                 <input
-                   type="text"
-                   value={targetCalendarName}
-                   onChange={(e) => setTargetCalendarName(e.target.value)}
-                   disabled={isGoogleSyncing}
-                   className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-sm text-right focus:ring-2 focus:ring-blue-500/20"
-                   placeholder="למשל: HebrewCalendar משפחה"
-                 />
+             <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-right">
+               <div className="flex items-center gap-3 mb-4">
+                 <ArrowLeftRight className="text-blue-600" size={20} />
+                 <h3 className="font-bold text-lg">ייבוא נתונים</h3>
                </div>
-
-               <button onClick={handleGoogleCalendarSync} disabled={isGoogleSyncing} className={cn("mt-4 w-full bg-gradient-to-r from-blue-600 to-blue-800 p-4 rounded-xl text-white font-bold flex items-center justify-center gap-3 shadow-lg transition-all group", isGoogleSyncing ? "opacity-60 cursor-not-allowed" : "active:scale-[0.98]")}>
-                 <ArrowLeftRight className="group-hover:rotate-6 transition-transform" size={20} />
-                 {isGoogleSyncing ? 'מסנכרן ליומן חדש...' : 'סנכרון אוטומטי ליומן חדש'}
-               </button>
-
-               {googleSyncStatus && <p className="text-center mt-3 text-[11px] text-blue-600 font-semibold">{googleSyncStatus}</p>}
-
-               <div className="mt-4 flex gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-right">
-                 <Info className="text-amber-700 shrink-0" size={18} />
-                 <p className="text-xs text-amber-900 leading-relaxed">
-                   גישה זו יוצרת יומן חדש בשם שייבחר. אם כבר קיים יומן בשם הזה, הוא יימחק קודם.<br/>
-                   בגלל מגבלות של גוגל, התהליך לוקח בערך דקה לכל אירוע.
-                 </p>
+               <div
+                 onDragOver={(e) => e.preventDefault()}
+                 onDrop={handleFileDrop}
+                 onClick={() => fileInputRef.current?.click()}
+                 className="border-2 border-dashed border-slate-200 rounded-xl p-8 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group"
+               >
+                 <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                   <UploadCloud className="text-blue-600" size={24} />
+                 </div>
+                 <p className="text-sm font-bold text-slate-900 mb-1">גרור קובץ ICS לכאן</p>
+                 <p className="text-[10px] text-slate-500 mb-4">או לחץ לבחירת קובץ מהמחשב</p>
+                 <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors pointer-events-none">
+                   בחר קובץ
+                 </button>
+                 <input type="file" ref={fileInputRef} className="hidden" accept=".ics" onChange={handleFileSelect} />
                </div>
              </section>
 
              <section className="bg-white border border-slate-200 rounded-xl p-5 text-right">
-               <h3 className="text-base font-bold text-slate-900">סנכרון ידני ליומן גוגל ולשירותי יומן נוספים</h3>
+               <h3 className="text-base font-bold text-slate-900">גיבוי נתונים</h3>
                <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-                 גישה זו מעט מורכבת כי היא דורשת כמה שלבים מצד המשתמש, אבל תהליך הייבוא עצמו מהיר מאוד.
+                 האפליקציה שומרת את הנתונים באופן מקומי בדפדפן. מומלץ לגבות את הנתונים לקובץ באופן קבוע. כמו כן, להעברת הנתונים למכשיר אחר, יש לגבות את הנתונים ולייבא אותם במכשיר החדש.
                </p>
-
-               <div className="mt-4 rounded-lg bg-slate-50 border border-slate-200 p-4">
-                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">שלבים</p>
-                 <ol className="list-decimal list-inside space-y-1 text-sm text-slate-700 leading-relaxed">
-                   <li>
-                     צרו יומן חדש באפליקציית היומן שלכם
-                     {' '}
-                     <a
-                       href={GOOGLE_CALENDAR_CREATE_URL}
-                       target="_blank"
-                       rel="noopener noreferrer"
-                       className="text-blue-700 underline decoration-blue-300 hover:text-blue-800"
-                     >
-                       (יצירת יומן בגוגל)
-                     </a>
-                     .
-                   </li>
-                   <li>לחצו על הכפתור למטה להורדת קובץ ICS.</li>
-                   <li>
-                     ייבאו את קובץ ה-ICS אל היומן החדש שיצרתם
-                     {' '}
-                     <a
-                       href={GOOGLE_CALENDAR_IMPORT_URL}
-                       target="_blank"
-                       rel="noopener noreferrer"
-                       className="text-blue-700 underline decoration-blue-300 hover:text-blue-800"
-                     >
-                       (לעמוד הייבוא בגוגל)
-                     </a>
-                     .
-                   </li>
-                 </ol>
-               </div>
 
                <div className="mt-4 space-y-3">
                  <button onClick={handleDownload} className="w-full bg-white border border-blue-200 text-blue-700 p-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-sm transition-all group hover:bg-blue-50 active:scale-[0.98]">
                    <Download className="group-hover:translate-y-1 transition-transform" size={20} />
                    הורדת קובץ ICS
                  </button>
-               </div>
-
-               <div className="mt-4 flex gap-3 p-3 rounded-lg bg-rose-50 border border-rose-200 text-right">
-                 <Info className="text-rose-700 shrink-0" size={18} />
-                 <p className="text-xs text-rose-900 leading-relaxed">
-                   חשוב לייבא את האירועים האלה ליומן נקי ולא לערבב אותם עם היומן הרגיל שלכם. <br/>
-                   אם תרצו לעשות בהמשך שינויים באירועים - יש למחוק את היומן ולבצע את התהליך מחדש.
-                 </p>
                </div>
              </section>
            </div>
