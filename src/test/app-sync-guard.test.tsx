@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
 
@@ -52,6 +52,8 @@ describe('App sync navigation guard', () => {
 
     expect(confirmSpy).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('heading', { name: 'לוח שנה' })).toBeInTheDocument();
-    expect(screen.queryByText('Mock syncing import/export view')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText('Mock syncing import/export view')).not.toBeInTheDocument();
+    });
   });
 });
