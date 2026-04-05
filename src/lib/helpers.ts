@@ -1,4 +1,4 @@
-import { HDate, gematriya } from '@hebcal/core';
+import { HDate, gematriya, gematriyaStrToNum } from '@hebcal/core';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { ReminderMode } from '../types';
 
@@ -73,4 +73,54 @@ export const getHebrewMonthSpan = (date: Date): string => {
     return `${startHStr}-${endHStr} ${startYStr}`;
   }
   return `${startHStr} ${startYStr} - ${endHStr} ${endYStr}`;
+};
+
+// Date conversion helpers used by Add Event flows.
+
+export const normalizeHebrewYear = (yearStr: string): number | null => {
+  const cleanYearStr = yearStr.replace(/^ה['״"]?(?=[א-ת])/g, '');
+  let y = gematriyaStrToNum(cleanYearStr);
+  if (!Number.isFinite(y) || y <= 0) {
+    return null;
+  }
+  if (y < 3000) y += 5000;
+  return y;
+};
+
+export const getGregorianDateFromHebrewInput = (
+  day: number,
+  month: string,
+  yearStr: string,
+  afterSunset: boolean
+): Date | null => {
+  try {
+    const year = normalizeHebrewYear(yearStr);
+    if (!year) return null;
+    const hd = new HDate(day, hebrewToEnglishMonth[month] || 'Nisan', year);
+    const targetHd = afterSunset ? hd.prev() : hd;
+    return targetHd.greg();
+  } catch {
+    return null;
+  }
+};
+
+export const getHebrewInputFromGregorianDate = (
+  gregorianDate: string,
+  afterSunset: boolean
+): HDate | null => {
+  try {
+    const [y, m, d] = gregorianDate.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    const baseDate = new Date(y, m - 1, d);
+    if (baseDate.getFullYear() !== y || baseDate.getMonth() !== m - 1 || baseDate.getDate() !== d) {
+      return null;
+    }
+
+    let hd = new HDate(baseDate);
+    if (afterSunset) hd = hd.next();
+
+    return hd;
+  } catch {
+    return null;
+  }
 };

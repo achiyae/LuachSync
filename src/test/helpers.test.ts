@@ -1,12 +1,18 @@
+// @vitest-environment node
 import { describe, it, expect } from 'vitest';
+import { HDate } from '@hebcal/core';
+import { format } from 'date-fns';
 import {
   buildReminderRules,
   escapeIcsText,
   getEventTypeLabel,
   getEventTypeSyncLabel,
+  getGregorianDateFromHebrewInput,
+  getHebrewInputFromGregorianDate,
   getHebrewMonthSpan,
   hebrewMonthsMap,
   hebrewToEnglishMonth,
+  normalizeHebrewYear,
   normalizeExportBaseId,
   normalizeImportedUid,
 } from '../lib/helpers';
@@ -207,5 +213,59 @@ describe('getHebrewMonthSpan', () => {
     const result = getHebrewMonthSpan(new Date(2024, 9, 15)); // October 2024
     // Should contain a Hebrew year string (gematriya), just checking structure
     expect(result).toMatch(/[\u05d0-\u05ea]/); // contains Hebrew chars
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Date conversion helpers
+// ---------------------------------------------------------------------------
+describe('normalizeHebrewYear', () => {
+  it('normalizes a short gematriya year into 5000-based year', () => {
+    expect(normalizeHebrewYear('תשפ"ו')).toBe(5786);
+  });
+
+  it('accepts prefixed Hebrew year notation', () => {
+    expect(normalizeHebrewYear('ה\'תשפ"ו')).toBe(5786);
+  });
+
+  it('returns null for invalid input', () => {
+    expect(normalizeHebrewYear('abc')).toBeNull();
+  });
+});
+
+describe('getGregorianDateFromHebrewInput', () => {
+  it('converts Hebrew date to Gregorian Date object', () => {
+    const gregorianDate = getGregorianDateFromHebrewInput(1, 'תשרי', 'תשפ"ו', false);
+    expect(gregorianDate).toBeInstanceOf(Date);
+    expect(gregorianDate ? format(gregorianDate, 'yyyy-MM-dd') : null).toBe('2025-09-23');
+  });
+
+  it('returns null for invalid Hebrew year', () => {
+    const gregorianDate = getGregorianDateFromHebrewInput(1, 'תשרי', 'not-a-year', false);
+    expect(gregorianDate).toBeNull();
+  });
+});
+
+describe('getHebrewInputFromGregorianDate', () => {
+  it('converts Gregorian date to Hebrew HDate object', () => {
+    const hebrewDate = getHebrewInputFromGregorianDate('2025-09-23', false);
+    expect(hebrewDate).toBeInstanceOf(HDate);
+    expect(hebrewDate?.getDate()).toBe(1);
+    expect(hebrewDate?.getMonthName()).toBe('Tishrei');
+    expect(hebrewDate?.getFullYear()).toBe(5786);
+  });
+
+  it('returns null for invalid Gregorian date', () => {
+    const hebrewDate = getHebrewInputFromGregorianDate('2025-02-30', false);
+    expect(hebrewDate).toBeNull();
+  });
+
+  it('moves to next Hebrew day when afterSunset is true', () => {
+    const before = getHebrewInputFromGregorianDate('2025-09-23', false);
+    const after = getHebrewInputFromGregorianDate('2025-09-23', true);
+
+    expect(before).not.toBeNull();
+    expect(after).not.toBeNull();
+    expect(after?.getDate()).toBeGreaterThan(before!.getDate());
   });
 });

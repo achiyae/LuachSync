@@ -1,10 +1,16 @@
 import React, { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Bell, Cake, Flame, Heart, Info, PlusCircle, Star } from 'lucide-react';
-import { HDate, gematriya, gematriyaStrToNum, getSedra } from '@hebcal/core';
+import { HDate, gematriya, getSedra } from '@hebcal/core';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { cn } from '../lib/utils';
-import { hebrewMonthsMap, hebrewToEnglishMonth } from '../lib/helpers';
+import {
+  getGregorianDateFromHebrewInput,
+  getHebrewInputFromGregorianDate,
+  hebrewMonthsMap,
+  hebrewToEnglishMonth,
+  normalizeHebrewYear
+} from '../lib/helpers';
 import { CalendarEvent, EventType, ReminderMode } from '../types';
 const REMINDER_MODE_OPTIONS: Array<{ id: ReminderMode; label: string; desc: string }> = [
   { id: 'use-export-default', label: 'השתמש בהגדרת הייצוא', desc: 'האירוע ישתמש בתזכורות שתוגדרנה במסך הייצוא.' },
@@ -15,57 +21,16 @@ const REMINDER_MODE_OPTIONS: Array<{ id: ReminderMode; label: string; desc: stri
 ];
 
 const AddEventView = ({ events, initialData, onSave, onCancel }: { events: CalendarEvent[], initialData?: CalendarEvent | null, onSave: (e: CalendarEvent) => void, onCancel: () => void }) => {
-  const normalizeHebrewYear = (yearStr: string) => {
-    const cleanYearStr = yearStr.replace(/^ה['״"]?(?=[א-ת])/g, '');
-    let y = gematriyaStrToNum(cleanYearStr);
-    if (!Number.isFinite(y) || y <= 0) {
-      return null;
-    }
-    if (y < 3000) y += 5000;
-    return y;
-  };
-
-  const getGregorianDateFromHebrewInput = (day: number, month: string, yearStr: string, afterSunset: boolean) => {
-    try {
-      const year = normalizeHebrewYear(yearStr);
-      if (!year) return null;
-      const hd = new HDate(day, hebrewToEnglishMonth[month] || 'Nisan', year);
-      const targetHd = afterSunset ? hd.prev() : hd;
-      return format(targetHd.greg(), 'yyyy-MM-dd');
-    } catch {
-      return null;
-    }
-  };
-
-  const getHebrewInputFromGregorianDate = (gregorianDate: string, afterSunset: boolean) => {
-    try {
-      const [y, m, d] = gregorianDate.split('-').map(Number);
-      if (!y || !m || !d) return null;
-      const baseDate = new Date(y, m - 1, d);
-      if (baseDate.getFullYear() !== y || baseDate.getMonth() !== m - 1 || baseDate.getDate() !== d) {
-        return null;
-      }
-
-      let hd = new HDate(baseDate);
-      if (afterSunset) hd = hd.next();
-
-      return {
-        day: hd.getDate(),
-        month: hebrewMonthsMap[hd.getMonthName()] || hd.getMonthName(),
-        yearStr: gematriya(hd.getFullYear())
-      };
-    } catch {
-      return null;
-    }
-  };
-
-  const initialGregorianDate = initialData
+  const initialGregorianDateObj = initialData
     ? getGregorianDateFromHebrewInput(
       initialData.hebrewDate.day,
       initialData.hebrewDate.month,
       gematriya(initialData.hebrewDate.year),
-      initialData.hebrewDate.afterSunset
-    ) || format(new Date(), 'yyyy-MM-dd')
+      initialData.hebrewDate.afterSunset ?? false
+    )
+    : null;
+  const initialGregorianDate = initialGregorianDateObj
+    ? format(initialGregorianDateObj, 'yyyy-MM-dd')
     : format(new Date(), 'yyyy-MM-dd');
 
   const [formData, setFormData] = useState({
@@ -91,20 +56,28 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
 
   useEffect(() => {
     if (formData.dateMode !== 'hebrew') return;
-    const syncedGregorianDate = getGregorianDateFromHebrewInput(
+    const syncedGregorianDateObj = getGregorianDateFromHebrewInput(
       formData.day,
       formData.month,
       formData.yearStr,
       formData.afterSunset
     );
+    const syncedGregorianDate = syncedGregorianDateObj
+      ? format(syncedGregorianDateObj, 'yyyy-MM-dd')
+      : null;
     if (!syncedGregorianDate || syncedGregorianDate === formData.gregorianDate) return;
     setFormData(prev => ({ ...prev, gregorianDate: syncedGregorianDate }));
   }, [formData.dateMode, formData.day, formData.month, formData.yearStr, formData.afterSunset, formData.gregorianDate]);
 
   useEffect(() => {
     if (formData.dateMode !== 'gregorian') return;
-    const syncedHebrew = getHebrewInputFromGregorianDate(formData.gregorianDate, formData.afterSunset);
-    if (!syncedHebrew) return;
+    const syncedHd = getHebrewInputFromGregorianDate(formData.gregorianDate, formData.afterSunset);
+    if (!syncedHd) return;
+    const syncedHebrew = {
+      day: syncedHd.getDate(),
+      month: hebrewMonthsMap[syncedHd.getMonthName()] || syncedHd.getMonthName(),
+      yearStr: gematriya(syncedHd.getFullYear())
+    };
     if (
       syncedHebrew.day === formData.day &&
       syncedHebrew.month === formData.month &&
