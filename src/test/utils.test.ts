@@ -14,7 +14,7 @@ describe('cn', () => {
     expect(cn('foo', false, null, undefined, 'bar')).toBe('foo bar');
   });
 
-  it('resolves Tailwind conflicts — last class wins', () => {
+  it('resolves Tailwind conflicts - last class wins', () => {
     expect(cn('p-2', 'p-4')).toBe('p-4');
   });
 
