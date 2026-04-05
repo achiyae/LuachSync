@@ -91,7 +91,7 @@ declare global {
     };
   }
 }
-const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsChange }: { events: CalendarEvent[], onImport?: (payload: ImportPayload) => void, exportSettings: ExportSettingsState, onExportSettingsChange: React.Dispatch<React.SetStateAction<ExportSettingsState>> }) => {
+const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsChange, onSyncingStateChange }: { events: CalendarEvent[], onImport?: (payload: ImportPayload) => void, exportSettings: ExportSettingsState, onExportSettingsChange: React.Dispatch<React.SetStateAction<ExportSettingsState>>, onSyncingStateChange?: (isSyncing: boolean) => void }) => {
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
   const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
   const GOOGLE_CALENDAR_IMPORT_URL = 'https://calendar.google.com/calendar/u/0/r/settings/export';
@@ -109,6 +109,32 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
   const [googleSyncSummary, setGoogleSyncSummary] = useState<GoogleSyncSummary | null>(null);
   const [googleSyncError, setGoogleSyncError] = useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  useEffect(() => {
+    onSyncingStateChange?.(isGoogleSyncing);
+  }, [isGoogleSyncing, onSyncingStateChange]);
+
+  useEffect(() => {
+    return () => {
+      onSyncingStateChange?.(false);
+    };
+  }, [onSyncingStateChange]);
+
+  useEffect(() => {
+    if (!isGoogleSyncing) {
+      return;
+    }
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isGoogleSyncing]);
 
   const normalizeReminderMode = (mode: string | undefined): ExportSettingsState['reminderMode'] => {
     if (mode === 'day-before' || mode === 'week-before' || mode === 'both' || mode === 'none') {

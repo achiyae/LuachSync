@@ -35,6 +35,7 @@ export default function App() {
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isImportExportSyncing, setIsImportExportSyncing] = useState(false);
 
   const {
     handleSaveEvent,
@@ -58,10 +59,21 @@ export default function App() {
     };
   }, [isMobileMenuOpen]);
 
+  const requestTabChange = (nextTab: AppTabId) => {
+    if (activeTab === 'import-export' && isImportExportSyncing && nextTab !== 'import-export') {
+      const shouldLeave = window.confirm('הסנכרון ליומן גוגל עדיין פעיל. יציאה ממסך זה תעצור את התהליך. להמשיך?');
+      if (!shouldLeave) {
+        return;
+      }
+    }
+
+    setActiveTab(nextTab);
+  };
+
   const dashboardView = (
     <DashboardView
       events={events}
-      onAddClick={() => setActiveTab('add-event')}
+      onAddClick={() => requestTabChange('add-event')}
       onEdit={handleEdit}
       onDelete={handleDelete}
       onClearAll={handleClearAll}
@@ -90,6 +102,7 @@ export default function App() {
         onImport={handleImportEvents}
         exportSettings={exportSettings}
         onExportSettingsChange={setExportSettings}
+        onSyncingStateChange={setIsImportExportSyncing}
       />
     ),
     support: <HelpSupportView />,
@@ -108,7 +121,7 @@ export default function App() {
 
       <AppShellSidebar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={requestTabChange}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
         isMobileMenuOpen={isMobileMenuOpen}
@@ -125,7 +138,7 @@ export default function App() {
           title={TAB_TITLES[activeTab]}
           onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
           onOpenSupport={() => {
-            setActiveTab('support');
+            requestTabChange('support');
             setIsMobileMenuOpen(false);
           }}
         />
@@ -148,7 +161,7 @@ export default function App() {
       {activeTab !== 'add-event' && (
         <button
           onClick={() => {
-            setActiveTab('add-event');
+            requestTabChange('add-event');
             setIsMobileMenuOpen(false);
           }}
           className={cn(
