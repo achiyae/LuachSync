@@ -7,6 +7,7 @@ export type AddEventDetails = {
   day: number | string;
   hebrewYear: string;
   time: 'before' | 'after';
+  reminderOverride?: 'use-export-default' | 'none' | 'day-before' | 'week-before' | 'both';
   save?: boolean;
 };
 
@@ -17,6 +18,7 @@ export async function addEventFromForm(user: UserEvent, details: AddEventDetails
     day,
     hebrewYear,
     time,
+    reminderOverride,
     save = true,
   } = details;
 
@@ -55,6 +57,18 @@ export async function addEventFromForm(user: UserEvent, details: AddEventDetails
   await user.type(yearInput, hebrewYear);
 
   await user.selectOptions(timeSelect, time);
+
+  if (reminderOverride) {
+    const reminderButtonLabels: Record<NonNullable<AddEventDetails['reminderOverride']>, RegExp> = {
+      'use-export-default': /השתמש בהגדרת הייצוא/,
+      none: /ללא תזכורות/,
+      'day-before': /יום לפני בשעה 19:00/,
+      'week-before': /שבוע לפני/,
+      both: /גם שבוע לפני וגם יום לפני ב-19:00/,
+    };
+
+    await user.click(screen.getByRole('button', { name: reminderButtonLabels[reminderOverride] }));
+  }
 
   if (save) {
     await user.click(screen.getByRole('button', { name: 'שמירת אירוע' }));
