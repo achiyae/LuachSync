@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowLeftRight, Check, ChevronRight, Copy, Download, Info, Plus, UploadCloud } from 'lucide-react';
-import { HDate } from '@hebcal/core';
+import { gematriya } from '@hebcal/core';
 import { addDays, format } from 'date-fns';
 import { cn } from '../lib/utils';
 import {
   buildReminderRules,
   escapeIcsText,
+  getGregorianDateFromHebrewInput,
   getEventTypeLabel,
   getEventTypeSyncLabel,
-  hebrewToEnglishMonth,
   normalizeExportBaseId,
   normalizeImportedUid,
   toHebrewNumeral,
@@ -352,13 +352,12 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
   };
 
   const resolveEventGregorianDate = (event: CalendarEvent) => {
-    try {
-      const month = hebrewToEnglishMonth[event.hebrewDate.month] || 'Nisan';
-      const hd = new HDate(event.hebrewDate.day, month, event.hebrewDate.year);
-      return hd.greg();
-    } catch {
-      return new Date();
-    }
+    return getGregorianDateFromHebrewInput(
+      event.hebrewDate.day,
+      event.hebrewDate.month,
+      gematriya(event.hebrewDate.year),
+      !!event.hebrewDate.afterSunset
+    ) || new Date();
   };
 
   const buildGeneratedEventDescription = (event: CalendarEvent) => {
@@ -406,26 +405,31 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
     for (const event of exportEvents) {
       const eventReminderRules = getEventReminderRules(event);
       const reminders = buildGoogleReminderOverrides(eventReminderRules);
-      const month = hebrewToEnglishMonth[event.hebrewDate.month] || 'Nisan';
       const eventTypeLabel = getEventTypeSyncLabel(event.type);
       const exportBaseId = normalizeExportBaseId(event.id);
       const description = buildGeneratedEventDescription(event);
 
       for (let i = 0; i < 100; i++) {
         const targetHebrewYear = event.hebrewDate.year + i;
-        try {
-          const hd = new HDate(event.hebrewDate.day, month, targetHebrewYear);
-          generated.push({
-            summary: `${eventTypeLabel} ל${event.title} (${i})`,
-            description,
-            type: event.type,
-            eventDate: hd.greg(),
-            reminders,
-            iCalUID: `${exportBaseId}-${i}@hc4gc-import`
-          });
-        } catch {
+        const eventDate = getGregorianDateFromHebrewInput(
+          event.hebrewDate.day,
+          event.hebrewDate.month,
+          gematriya(targetHebrewYear),
+          !!event.hebrewDate.afterSunset
+        );
+        if (!eventDate) {
           // Skip years where this Hebrew date does not exist.
+          continue;
         }
+
+        generated.push({
+          summary: `${eventTypeLabel} ל${event.title} (${i})`,
+          description,
+          type: event.type,
+          eventDate,
+          reminders,
+          iCalUID: `${exportBaseId}-${i}@hc4gc-import`
+        });
       }
     }
 
@@ -466,7 +470,6 @@ ${reminderSection}END:VEVENT`;
     const exportBaseId = normalizeExportBaseId(e.id);
     const eventReminderRules = getEventReminderRules(e);
     const eventTypeLabel = getEventTypeSyncLabel(e.type);
-    const month = hebrewToEnglishMonth[e.hebrewDate.month] || 'Nisan';
     const description = buildGeneratedEventDescription(e);
     const eventsForHundredYears: string[] = [];
 
@@ -474,20 +477,28 @@ ${reminderSection}END:VEVENT`;
       const occurrence = i;
       const targetHebrewYear = e.hebrewDate.year + i;
 
-      try {
-        const hd = new HDate(e.hebrewDate.day, month, targetHebrewYear);
-        const eventDate = hd.greg();
-        const dtStart = formatIcsDate(eventDate);
-        const dtEnd = formatIcsDate(addDays(eventDate, 1));
-        const dtStamp = formatIcsUtcDateTime(new Date());
-        const summary = `${eventTypeLabel} ל${e.title} (${occurrence})`;
-        const escapedSummary = escapeIcsText(summary);
-        const escapedDescription = escapeIcsText(description);
-        const escapedCategory = escapeIcsText(e.type);
-        const icsReminders = buildIcsReminders(summary, eventDate, eventReminderRules);
-        const reminderSection = icsReminders ? `${icsReminders}\n` : '';
+      const eventDate = getGregorianDateFromHebrewInput(
+        e.hebrewDate.day,
+        e.hebrewDate.month,
+        gematriya(targetHebrewYear),
+        !!e.hebrewDate.afterSunset
+      );
+      if (!eventDate) {
+        // Skip invalid dates in years where the Hebrew date does not exist.
+        continue;
+      }
 
-        eventsForHundredYears.push(`BEGIN:VEVENT
+      const dtStart = formatIcsDate(eventDate);
+      const dtEnd = formatIcsDate(addDays(eventDate, 1));
+      const dtStamp = formatIcsUtcDateTime(new Date());
+      const summary = `${eventTypeLabel} ל${e.title} (${occurrence})`;
+      const escapedSummary = escapeIcsText(summary);
+  const escapedDescription = escapeIcsText(description);
+      const escapedCategory = escapeIcsText(e.type);
+      const icsReminders = buildIcsReminders(summary, eventDate, eventReminderRules);
+      const reminderSection = icsReminders ? `${icsReminders}\n` : '';
+
+      eventsForHundredYears.push(`BEGIN:VEVENT
 UID:${exportBaseId}-${occurrence}@hc4gc
 DTSTAMP:${dtStamp}
 DTSTART;VALUE=DATE:${dtStart}
@@ -499,9 +510,6 @@ X-HC4GC-ENTRY-TYPE:GENERATED
 TRANSP:TRANSPARENT
 X-MICROSOFT-CDO-BUSYSTATUS:FREE
 ${reminderSection}END:VEVENT`);
-      } catch {
-        // Skip invalid dates in years where the Hebrew date does not exist.
-      }
     }
 
     return eventsForHundredYears;
