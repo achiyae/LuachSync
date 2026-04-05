@@ -55,6 +55,7 @@ type GoogleSyncSummary = {
   deleteFailed: number;
   inserted: number;
   failed: number;
+  durationMs: number;
   firstInsertError?: string;
   firstDeleteError?: string;
   firstInsertPayload?: string;
@@ -106,6 +107,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
   const [googleSyncStatus, setGoogleSyncStatus] = useState<string>('');
   const [targetCalendarName, setTargetCalendarName] = useState('HC4GC');
   const [googleSyncSummary, setGoogleSyncSummary] = useState<GoogleSyncSummary | null>(null);
+  const [googleSyncError, setGoogleSyncError] = useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const normalizeReminderMode = (mode: string | undefined): ExportSettingsState['reminderMode'] => {
@@ -652,6 +654,25 @@ END:VCALENDAR`;
     return /\b429\b/.test(message);
   };
 
+  const formatDuration = (durationMs: number) => {
+    const clampedMs = Math.max(0, Math.floor(durationMs));
+    const totalSeconds = Math.floor(clampedMs / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      const remainingMinutes = Math.floor((totalSeconds % 3600) / 60);
+      return `${hours}:${String(remainingMinutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')} שעות`;
+    }
+
+    if (minutes === 0) {
+      return `${seconds} שניות`;
+    }
+
+    return `${minutes}:${String(seconds).padStart(2, '0')} דקות`;
+  };
+
   const findOwnedCalendarByName = async (accessToken: string, calendarName: string) => {
     let pageToken: string | undefined;
     const normalizedTarget = calendarName.trim().toLowerCase();
@@ -682,21 +703,126 @@ END:VCALENDAR`;
     return null;
   };
 
-  const deleteCalendarIfExists = async (accessToken: string, calendarId: string) => {
+  const getCalendarById = async (accessToken: string, calendarId: string) => {
+    const max503Retries = 2;
+
+    for (let attempt = 0; attempt <= max503Retries; attempt++) {
+      try {
+        return await callGoogleCalendarApi<{ id: string; summary?: string }>(
+          accessToken,
+          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}`,
+          undefined,
+          15000,
+          0
+        );
+      } catch (error) {
+        if (error instanceof GoogleCalendarApiError && (error.status === 404 || error.status === 410)) {
+          return null;
+        }
+
+        const is503 = error instanceof GoogleCalendarApiError && error.status === 503;
+        if (is503 && attempt < max503Retries) {
+          const fallbackBackoffMs = Math.min(12000, 1500 * Math.pow(2, attempt));
+          const backoffMs = Math.max(error.retryAfterMs || 0, fallbackBackoffMs);
+          await sleep(backoffMs);
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    return null;
+  };
+
+  const waitForCalendarDeletion = async (
+    accessToken: string,
+    calendarId: string,
+    maxWaitMs = 120000,
+    pollIntervalMs = 5000
+  ) => {
+    const startedAt = Date.now();
+    const deadline = startedAt + maxWaitMs;
+    let lastCheckError = '';
+
+    while (Date.now() <= deadline) {
+      try {
+        const existing = await getCalendarById(accessToken, calendarId);
+        if (!existing) {
+          return {
+            deleted: true,
+            waitedMs: Date.now() - startedAt,
+            lastCheckError
+          };
+        }
+      } catch (error) {
+        lastCheckError = error instanceof Error ? error.message : 'Failed to verify calendar deletion.';
+      }
+
+      const remainingMs = deadline - Date.now();
+      if (remainingMs <= 0) {
+        break;
+      }
+
+      await sleep(Math.min(pollIntervalMs, remainingMs));
+    }
+
+    return {
+      deleted: false,
+      waitedMs: Date.now() - startedAt,
+      lastCheckError
+    };
+  };
+
+  const deleteCalendarIfExists = async (
+    accessToken: string,
+    calendarId: string,
+    onStatus?: (status: string) => void
+  ) => {
+    let deleteRequestError = '';
+    let deleteHadNon2xxResponse = false;
+
     try {
       await callGoogleCalendarApi(
         accessToken,
         `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}`,
-        { method: 'DELETE' }
+        { method: 'DELETE' },
+        90000,
+        0
       );
-      return { deleted: 1, deleteFailed: 0, firstDeleteError: '' };
     } catch (error) {
+      deleteHadNon2xxResponse = true;
+      deleteRequestError = error instanceof Error ? error.message : 'Calendar delete request failed.';
+    }
+
+    if (deleteHadNon2xxResponse) {
+      onStatus?.('בקשת המחיקה לא הסתיימה ב-2xx. ממתין דקה ואז מתחיל אימות כל 5 שניות...');
+      await sleep(60000);
+      onStatus?.('מאמת מחיקה של היומן הישן (בדיקה כל 5 שניות)...');
+    }
+
+    const verification = await waitForCalendarDeletion(accessToken, calendarId, 120000, 5000);
+    if (verification.deleted) {
       return {
-        deleted: 0,
-        deleteFailed: 1,
-        firstDeleteError: error instanceof Error ? error.message : 'Calendar delete request failed.'
+        deleted: 1,
+        deleteFailed: 0,
+        firstDeleteError: deleteRequestError
       };
     }
+
+    const verificationError = verification.lastCheckError
+      ? ` Verification check error: ${verification.lastCheckError}`
+      : '';
+
+    const timeoutMessage = `Calendar deletion was not confirmed within ${Math.ceil(verification.waitedMs / 1000)} seconds.${verificationError}`;
+
+    return {
+      deleted: 0,
+      deleteFailed: 1,
+      firstDeleteError: deleteRequestError
+        ? `${deleteRequestError} ${timeoutMessage}`
+        : timeoutMessage
+    };
   };
 
   const handleGoogleCalendarSync = async () => {
@@ -717,7 +843,10 @@ END:VCALENDAR`;
       return;
     }
 
+    const syncStartedAt = Date.now();
+
     setGoogleSyncSummary(null);
+    setGoogleSyncError(null);
     setIsGoogleSyncing(true);
     setGoogleSyncStatus('מתחבר לחשבון Google...');
 
@@ -744,8 +873,8 @@ END:VCALENDAR`;
         usedExistingCalendar = true;
         calendarName = existingCalendar.summary || normalizedCalendarName;
 
-        setGoogleSyncStatus('מוחק את היומן הקיים...');
-        const clearResult = await deleteCalendarIfExists(accessToken, existingCalendar.id);
+        setGoogleSyncStatus('מוחק את היומן הקיים... יכול לקחת כמה דקות.');
+        const clearResult = await deleteCalendarIfExists(accessToken, existingCalendar.id, setGoogleSyncStatus);
         deleted = clearResult.deleted;
         deleteFailed = clearResult.deleteFailed;
         firstDeleteError = clearResult.firstDeleteError;
@@ -981,13 +1110,14 @@ END:VCALENDAR`;
         deleteFailed,
         inserted,
         failed,
+        durationMs: Date.now() - syncStartedAt,
         firstInsertError,
         firstDeleteError,
         firstInsertPayload
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'שגיאה לא צפויה בסנכרון.';
-      alert(`שגיאה בסנכרון מול Google Calendar: ${message}`);
+      setGoogleSyncError(message);
     } finally {
       setIsGoogleSyncing(false);
       setGoogleSyncStatus('');
@@ -1275,6 +1405,7 @@ END:VCALENDAR`;
                 <div className="flex justify-between"><span>אירועים שנכשלו בהזנה</span><span className="font-bold text-amber-700">{googleSyncSummary.failed}</span></div>
                 <div className="flex justify-between"><span>יומנים שנמחקו לפני הסנכרון</span><span className="font-bold">{googleSyncSummary.deleted}</span></div>
                 <div className="flex justify-between"><span>כשלים במחיקת יומן</span><span className="font-bold text-amber-700">{googleSyncSummary.deleteFailed}</span></div>
+                <div className="flex justify-between"><span>זמן סנכרון</span><span className="font-bold">{formatDuration(googleSyncSummary.durationMs)}</span></div>
               </div>
 
               {googleSyncSummary.firstInsertError && (
@@ -1309,6 +1440,65 @@ END:VCALENDAR`;
                 <button
                   type="button"
                   onClick={() => setGoogleSyncSummary(null)}
+                  className="px-3 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm font-bold hover:bg-slate-200 transition-colors"
+                >
+                  סגור
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {googleSyncError && (
+          <>
+            <motion.button
+              type="button"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setGoogleSyncError(null)}
+              className="fixed inset-0 z-[70] bg-slate-900/40 backdrop-blur-[1px]"
+              aria-label="סגור שגיאת סנכרון"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-x-3 bottom-3 sm:inset-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[34rem] z-[71] bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 text-right max-h-[90vh] overflow-y-auto"
+              dir="rtl"
+            >
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-widest text-slate-500 font-bold">שגיאת סנכרון Google Calendar</p>
+                  <h3 className="text-lg font-extrabold text-slate-900 leading-tight mt-1 break-words">הסנכרון הופסק לפני השלמה</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setGoogleSyncError(null)}
+                  className="shrink-0 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold transition-colors"
+                >
+                  סגור
+                </button>
+              </div>
+
+              <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900 leading-relaxed break-words select-text whitespace-pre-wrap">
+                {googleSyncError}
+              </div>
+
+              <div className="mt-5 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(googleSyncError)}
+                  className="flex-1 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors"
+                >
+                  העתק שגיאה
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGoogleSyncError(null)}
                   className="px-3 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm font-bold hover:bg-slate-200 transition-colors"
                 >
                   סגור
