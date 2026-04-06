@@ -61,7 +61,32 @@ type GoogleSyncSummary = {
   firstInsertPayload?: string;
 };
 
-const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
+// Use an inline Web Worker for sleep so timers fire on schedule even when the tab is
+// in the background (browsers throttle main-thread setTimeout in hidden tabs).
+const sleep = (() => {
+  let _worker: Worker | null = null;
+  const _callbacks = new Map<number, () => void>();
+  let _counter = 0;
+
+  const getWorker = (): Worker => {
+    if (!_worker) {
+      const src = 'self.onmessage=function(e){var d=e.data;setTimeout(function(){self.postMessage(d.i);},d.ms);}';
+      _worker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+      _worker.onmessage = (e: MessageEvent<number>) => {
+        const cb = _callbacks.get(e.data);
+        if (cb) { _callbacks.delete(e.data); cb(); }
+      };
+    }
+    return _worker;
+  };
+
+  return (ms: number) =>
+    new Promise<void>((resolve) => {
+      const id = ++_counter;
+      _callbacks.set(id, resolve);
+      getWorker().postMessage({ i: id, ms });
+    });
+})();
 
 class GoogleCalendarApiError extends Error {
   status?: number;
