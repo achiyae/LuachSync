@@ -42,11 +42,6 @@ const AppTopBar = ({ title, onOpenMobileMenu, onOpenSupport }: AppTopBarProps) =
         >
           <HelpCircle size={20} />
         </button>
-        <img
-          alt="Profile"
-          className="w-8 h-8 rounded-full border border-slate-200"
-          src="https://picsum.photos/seed/user123/100/100"
-        />
       </div>
     </header>
   );
