@@ -1,7 +1,7 @@
 import React from 'react';
-import { Github, HelpCircle, Menu } from 'lucide-react';
+import { Github, HelpCircle, Menu, Star } from 'lucide-react';
 
-const REPOSITORY_URL = 'https://github.com/achiyae/HebrewCalendar';
+const REPOSITORY_URL = 'https://github.com/achiyae/LuachSync';
 
 type AppTopBarProps = {
   title: string;
@@ -24,6 +24,17 @@ const AppTopBar = ({ title, onOpenMobileMenu, onOpenSupport }: AppTopBarProps) =
         <h1 className="text-xl font-bold tracking-tight text-blue-900">{title}</h1>
       </div>
       <div className="flex items-center gap-4">
+        <a
+          href={REPOSITORY_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Star us on GitHub"
+          aria-label="Star us on GitHub"
+          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-colors text-amber-700 text-sm font-medium"
+        >
+          <Star size={14} className="fill-amber-400 text-amber-400" />
+          <span>Star us on GitHub</span>
+        </a>
         <a
           href={REPOSITORY_URL}
           target="_blank"
