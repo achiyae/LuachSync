@@ -57,13 +57,13 @@ See the privacy policy at: <https://luachsync.elyasaf.net/privacy>
 Add these under Authorized JavaScript origins:
 
 1. Local dev: `http://localhost:3000`
-2. GitHub Pages origin: e.g., `https://achiyae.github.io`
+2. GitHub Pages origin: e.g., `https://<username>.github.io`
 
 ### 2.1 Existing Calendar Behavior
 
 1. The app now asks for a custom target calendar name.
 2. If a calendar with that exact name already exists in the signed-in account, you will get a confirmation warning.
-3. If you approve, the existing calendar is deleted and recreated with the same name, then events are imported via Google Calendar API.
+3. If you approve, the existing calendar is deleted and recreated with the same name, and then events are imported via Google Calendar API.
 
 ### 3. Security Notes
 
