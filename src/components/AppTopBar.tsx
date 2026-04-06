@@ -53,6 +53,11 @@ const AppTopBar = ({ title, onOpenMobileMenu, onOpenSupport }: AppTopBarProps) =
         >
           <HelpCircle size={20} />
         </button>
+        <img
+          src="/favicon.png"
+          alt="LuachSync logo"
+          className="h-8 w-8 sm:h-9 sm:w-9 object-contain"
+        />
       </div>
     </header>
   );

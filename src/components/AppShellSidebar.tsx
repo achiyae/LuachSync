@@ -51,16 +51,15 @@ const AppShellSidebar = ({
         <div className={cn('flex items-center', isCollapsed ? 'justify-center' : 'justify-between gap-3')}>
           {!isCollapsed && (
             <div className="flex items-center gap-3">
-              <img src="/favicon.png" alt="LuachSync Logo" className="w-10 h-10 object-contain rounded shadow-sm mr-1" />
               <div>
                 <h2 className="font-bold text-blue-900 leading-tight">LuachSync</h2>
                 <p className="text-[10px] uppercase tracking-widest text-slate-500 opacity-70">מערכת לוח שנה עברי</p>
               </div>
             </div>
           )}
-          {isCollapsed && (
+          {/* {isCollapsed && (
             <img src="/favicon.png" alt="LuachSync Logo" className="w-10 h-10 object-contain rounded shadow-sm mr-1" />
-          )}
+          )} */}
           <button
             onClick={onToggleCollapse}
             title={isCollapsed ? 'הרחב תפריט' : 'כווץ תפריט'}
