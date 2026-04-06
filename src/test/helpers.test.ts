@@ -130,12 +130,12 @@ describe('escapeIcsText', () => {
 // normalizeImportedUid / normalizeExportBaseId
 // ---------------------------------------------------------------------------
 describe('normalizeImportedUid', () => {
-  it('strips a single @hc4gc-source suffix', () => {
-    expect(normalizeImportedUid('abc@hc4gc-source')).toBe('abc');
+  it('strips a single @luachsync-source suffix', () => {
+    expect(normalizeImportedUid('abc@luachsync-source')).toBe('abc');
   });
 
-  it('strips repeated @hc4gc-source suffixes', () => {
-    expect(normalizeImportedUid('abc@hc4gc-source@hc4gc-source')).toBe('abc');
+  it('strips repeated @luachsync-source suffixes', () => {
+    expect(normalizeImportedUid('abc@luachsync-source@luachsync-source')).toBe('abc');
   });
 
   it('leaves strings without the suffix unchanged', () => {
@@ -144,8 +144,8 @@ describe('normalizeImportedUid', () => {
 });
 
 describe('normalizeExportBaseId', () => {
-  it('strips a single @hc4gc-source suffix', () => {
-    expect(normalizeExportBaseId('event-id@hc4gc-source')).toBe('event-id');
+  it('strips a single @luachsync-source suffix', () => {
+    expect(normalizeExportBaseId('event-id@luachsync-source')).toBe('event-id');
   });
 
   it('leaves strings without the suffix unchanged', () => {

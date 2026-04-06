@@ -55,7 +55,7 @@ const AppShellSidebar = ({
                 <BookOpen size={20} />
               </div>
               <div>
-                <h2 className="font-bold text-blue-900 leading-tight">HC4GC</h2>
+                <h2 className="font-bold text-blue-900 leading-tight">LuachSync</h2>
                 <p className="text-[10px] uppercase tracking-widest text-slate-500 opacity-70">מערכת לוח שנה עברי</p>
               </div>
             </div>

@@ -7,7 +7,7 @@ export default function TermsView() {
     <section className="h-[calc(100vh-5rem)] p-4 sm:p-6 lg:p-8">
       <div className="h-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <iframe
-          title="HC4GC Terms of Service"
+          title="LuachSync Terms of Service"
           src={termsUrl}
           className="block h-full w-full bg-white"
         />

@@ -109,10 +109,10 @@ export const escapeIcsText = (value: string): string => value
   .replace(/\r?\n/g, '\\n');
 
 export const normalizeImportedUid = (uid: string): string =>
-  uid.replace(/(?:@hc4gc-source)+$/, '');
+  uid.replace(/(?:@luachsync-source)+$/, '');
 
 export const normalizeExportBaseId = (id: string): string =>
-  id.replace(/(?:@hc4gc-source)+$/, '');
+  id.replace(/(?:@luachsync-source)+$/, '');
 
 export const getHebrewMonthSpan = (date: Date): string => {
   const startH = new HDate(startOfMonth(date));

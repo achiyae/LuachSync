@@ -11,7 +11,7 @@ describe('Import/export e2e flow', () => {
   it('applies afterSunset when calculating source and generated Gregorian dates in ICS preview', async () => {
     const user = userEvent.setup();
 
-    window.localStorage.setItem('hc4gc.appState.v1', JSON.stringify({
+    window.localStorage.setItem('luachsync.appState.v1', JSON.stringify({
       events: [
         {
           id: 'event-before',
@@ -54,10 +54,10 @@ describe('Import/export e2e flow', () => {
       element?.tagName.toLowerCase() === 'code' && content.includes('BEGIN:VCALENDAR')
     )).textContent || '';
 
-    const beforeSourceMatch = previewText.match(/UID:event-before@hc4gc-source[\s\S]*?DTSTART;VALUE=DATE:(\d{8})/);
-    const afterSourceMatch = previewText.match(/UID:event-after@hc4gc-source[\s\S]*?DTSTART;VALUE=DATE:(\d{8})/);
-    const beforeGeneratedMatch = previewText.match(/UID:event-before-0@hc4gc[\s\S]*?DTSTART;VALUE=DATE:(\d{8})/);
-    const afterGeneratedMatch = previewText.match(/UID:event-after-0@hc4gc[\s\S]*?DTSTART;VALUE=DATE:(\d{8})/);
+    const beforeSourceMatch = previewText.match(/UID:event-before@luachsync-source[\s\S]*?DTSTART;VALUE=DATE:(\d{8})/);
+    const afterSourceMatch = previewText.match(/UID:event-after@luachsync-source[\s\S]*?DTSTART;VALUE=DATE:(\d{8})/);
+    const beforeGeneratedMatch = previewText.match(/UID:event-before-0@luachsync[\s\S]*?DTSTART;VALUE=DATE:(\d{8})/);
+    const afterGeneratedMatch = previewText.match(/UID:event-after-0@luachsync[\s\S]*?DTSTART;VALUE=DATE:(\d{8})/);
 
     expect(beforeSourceMatch?.[1]).toBeTruthy();
     expect(afterSourceMatch?.[1]).toBeTruthy();
@@ -84,7 +84,7 @@ describe('Import/export e2e flow', () => {
   it('uses export default reminder for one event and keeps override for another in ICS preview', async () => {
     const user = userEvent.setup();
 
-    window.localStorage.setItem('hc4gc.appState.v1', JSON.stringify({
+    window.localStorage.setItem('luachsync.appState.v1', JSON.stringify({
       events: [
         {
           id: 'event-1',

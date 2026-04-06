@@ -21,7 +21,7 @@ export default function HelpSupportView() {
           <LifeBuoy size={14} />
           <span>תמיכה</span>
         </div>
-        <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight">מדריך שימוש מלא ב-HC4GC</h2>
+        <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight">מדריך שימוש מלא ב-LuachSync</h2>
         <p className="mt-3 text-sm sm:text-base text-blue-100 max-w-2xl">
           העמוד הזה מרכז את כל מה שצריך כדי לעבוד מהר ונכון: הוספת אירועים, ניהול תזכורות,
           ייצוא/ייבוא וסנכרון ליומן גוגל.

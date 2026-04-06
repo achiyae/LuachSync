@@ -1,12 +1,16 @@
-# HC4GC
+# LuachSync
+
+<p align="center">
+  <img src="public/logo.png" alt="LuachSync Logo" width="200" />
+</p>
 
 Hebrew Calendar for Google Calendar
 
-The app is deployed at <https://hc4gc.elyasaf.net/>
+The app is deployed at <https://luachsync.elyasaf.net/>
 
 ## What This App Does
 
-HC4GC is designed for recurring Hebrew-date events (for example birthdays, yahrzeits, anniversaries, and memorial dates) and turns them into Gregorian calendar events that can be used in standard calendar systems like Google Calendar.
+LuachSync is designed for recurring Hebrew-date events (for example birthdays, yahrzeits, anniversaries, and memorial dates) and turns them into Gregorian calendar events that can be used in standard calendar systems like Google Calendar.
 
 The app workflow is:
 
@@ -20,12 +24,12 @@ The app workflow is:
 
 Example:
 
-- If you enter a Hebrew birthday such as 1 Nisan 5740, HC4GC computes when that birthday falls each year in the Gregorian calendar and creates the recurring series for up to 100 years.
-- With Google sync, HC4GC creates a new calendar in your Google account and inserts those calculated Gregorian birthday events into that calendar.
+- If you enter a Hebrew birthday such as 1 Nisan 5740, LuachSync computes when that birthday falls each year in the Gregorian calendar and creates the recurring series for up to 100 years.
+- With Google sync, LuachSync creates a new calendar in your Google account and inserts those calculated Gregorian birthday events into that calendar.
 
 ## Public Privacy Policy
 
-See the privacy policy at: <https://hc4gc.elyasaf.net/privacy>
+See the privacy policy at: <https://luachsync.elyasaf.net/privacy>
 
 ## Run Locally
 

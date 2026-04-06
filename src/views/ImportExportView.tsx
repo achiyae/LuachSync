@@ -105,7 +105,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
   const [isGoogleScriptReady, setIsGoogleScriptReady] = useState(false);
   const [isGoogleSyncing, setIsGoogleSyncing] = useState(false);
   const [googleSyncStatus, setGoogleSyncStatus] = useState<string>('');
-  const [targetCalendarName, setTargetCalendarName] = useState('HC4GC');
+  const [targetCalendarName, setTargetCalendarName] = useState('LuachSync');
   const [googleSyncSummary, setGoogleSyncSummary] = useState<GoogleSyncSummary | null>(null);
   const [googleSyncError, setGoogleSyncError] = useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -454,7 +454,7 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
           type: event.type,
           eventDate,
           reminders,
-          iCalUID: `${exportBaseId}-${i}@hc4gc-import`
+          iCalUID: `${exportBaseId}-${i}@luachsync-import`
         });
       }
     }
@@ -477,14 +477,14 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
     const dtStamp = formatIcsUtcDateTime(new Date());
 
     return `BEGIN:VEVENT
-UID:${exportBaseId}@hc4gc-source
+UID:${exportBaseId}@luachsync-source
 DTSTAMP:${dtStamp}
 DTSTART;VALUE=DATE:${dtStart}
 DTEND;VALUE=DATE:${dtEnd}
 SUMMARY:${escapedSummary}
 CATEGORIES:${escapedCategory}
 TRANSP:TRANSPARENT
-X-HC4GC-ENTRY-TYPE:SOURCE
+X-LuachSync-ENTRY-TYPE:SOURCE
 X-HEBREW-DATE:${e.hebrewDate.day} ${e.hebrewDate.month} ${e.hebrewDate.year}
 X-AFTER-SUNSET:${e.hebrewDate.afterSunset ? 'true' : 'false'}
 X-REMINDER-OVERRIDE:${e.reminderOverride || 'use-export-default'}
@@ -525,14 +525,14 @@ ${reminderSection}END:VEVENT`;
       const reminderSection = icsReminders ? `${icsReminders}\n` : '';
 
       eventsForHundredYears.push(`BEGIN:VEVENT
-UID:${exportBaseId}-${occurrence}@hc4gc
+UID:${exportBaseId}-${occurrence}@luachsync
 DTSTAMP:${dtStamp}
 DTSTART;VALUE=DATE:${dtStart}
 DTEND;VALUE=DATE:${dtEnd}
 SUMMARY:${escapedSummary}
 DESCRIPTION:${escapedDescription}
 CATEGORIES:${escapedCategory}
-X-HC4GC-ENTRY-TYPE:GENERATED
+X-LuachSync-ENTRY-TYPE:GENERATED
 TRANSP:TRANSPARENT
 X-MICROSOFT-CDO-BUSYSTATUS:FREE
 ${reminderSection}END:VEVENT`);
@@ -545,7 +545,7 @@ ${reminderSection}END:VEVENT`);
 
   const icsPreview = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//HC4GC//NONSGML App//EN
+PRODID:-//LuachSync//NONSGML App//EN
 CALSCALE:GREGORIAN
 X-EXPORT-SCHEMA:${selectedSchema.toUpperCase()}
 X-EXPORT-EVENT-TYPES:${selectedEventTypes.join(',') || 'none'}
@@ -925,7 +925,7 @@ END:VCALENDAR`;
             method: 'POST',
             body: JSON.stringify({
               summary: normalizedCalendarName,
-              description: 'Created by HC4GC sync flow',
+              description: 'Created by LuachSync sync flow',
               timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
             })
           }
@@ -941,7 +941,7 @@ END:VCALENDAR`;
             method: 'POST',
             body: JSON.stringify({
               summary: normalizedCalendarName,
-              description: 'Created by HC4GC sync flow',
+              description: 'Created by LuachSync sync flow',
               timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
             })
           }

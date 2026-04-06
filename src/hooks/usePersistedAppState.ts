@@ -6,8 +6,8 @@ import {
   PersistedAppState,
 } from '../views/types';
 
-const APP_STORAGE_KEY = 'hc4gc.appState.v1';
-const LEGACY_EVENTS_STORAGE_KEY = 'hc4gc.events.v1';
+const APP_STORAGE_KEY = 'luachsync.appState.v1';
+const LEGACY_EVENTS_STORAGE_KEY = 'luachsync.events.v1';
 
 export const usePersistedAppState = () => {
   const [appState, setAppState] = useState<PersistedAppState>(() => {
