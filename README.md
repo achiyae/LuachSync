@@ -25,7 +25,7 @@ Example:
 
 ## Public Privacy Policy
 
-See the standalone policy: [PRIVACY.md](PRIVACY.md)
+See the privacy policy at: <https://hc4gc.elyasaf.net/privacy>
 
 ## Run Locally
 
