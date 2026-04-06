@@ -1,8 +1,6 @@
 # LuachSync
 
-<p align="center">
-  <img src="public/github-social-preview.png" alt="LuachSync Logo" width="200" />
-</p>
+![LuachSync Logo](public/github-social-preview.png)
 
 Hebrew Calendar for Google Calendar
 
@@ -10,7 +8,7 @@ The app is deployed at <https://luachsync.elyasaf.net/>
 
 ## What This App Does
 
-LuachSync is designed for recurring Hebrew-date events (for example birthdays, yahrzeits, anniversaries, and memorial dates) and turns them into Gregorian calendar events that can be used in standard calendar systems like Google Calendar.
+LuachSync is designed for recurring Hebrew-date events (for example, birthdays, yahrzeits, anniversaries, and memorial dates) and turns them into Gregorian calendar events that can be used in standard calendar systems like Google Calendar.
 
 The app workflow is:
 
@@ -52,7 +50,7 @@ See the privacy policy at: <https://luachsync.elyasaf.net/privacy>
 
 1. Create or select a Google Cloud project.
 2. Enable Google Calendar API.
-3. Create OAuth 2.0 Client ID of type Web application.
+3. Create an OAuth 2.0 Client ID of type Web application.
 
 ### 2. OAuth Allowed Origins
 
