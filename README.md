@@ -1,7 +1,7 @@
 # LuachSync
 
 <p align="center">
-  <img src="public/logo.png" alt="LuachSync Logo" width="200" />
+  <img src="public/github-social-preview.png" alt="LuachSync Logo" width="200" />
 </p>
 
 Hebrew Calendar for Google Calendar
