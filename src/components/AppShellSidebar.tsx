@@ -9,10 +9,11 @@ import {
   ChevronLeft,
   BookOpen,
   Shield,
+  FileText,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
-export type AppTabId = 'dashboard' | 'calendar' | 'add-event' | 'import-export' | 'support' | 'privacy';
+export type AppTabId = 'dashboard' | 'calendar' | 'add-event' | 'import-export' | 'support' | 'privacy' | 'terms';
 
 type AppShellSidebarProps = {
   activeTab: AppTabId;
@@ -140,6 +141,23 @@ const AppShellSidebar = ({
         >
           <Shield size={18} />
           {!isCollapsed && <span className="text-sm tracking-wide">מדיניות פרטיות</span>}
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('terms');
+            onCloseMobileMenu();
+          }}
+          title="תנאי שימוש"
+          className={cn(
+            'flex items-center px-3 py-2 rounded-lg transition-all text-right w-full',
+            isCollapsed ? 'justify-center' : 'gap-3',
+            activeTab === 'terms'
+              ? 'bg-white text-blue-700 font-bold shadow-sm'
+              : 'text-slate-600 hover:text-blue-600 hover:bg-slate-200'
+          )}
+        >
+          <FileText size={18} />
+          {!isCollapsed && <span className="text-sm tracking-wide">תנאי שימוש</span>}
         </button>
       </div>
     </aside>

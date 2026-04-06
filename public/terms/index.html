@@ -47,6 +47,19 @@
       text-decoration: none;
     }
     .back-link:hover { text-decoration: underline; }
+    .embedded body {
+      background: transparent;
+      padding: 0;
+    }
+    .embedded .container {
+      max-width: none;
+      border: none;
+      border-radius: 0;
+      padding: 2rem;
+    }
+    .embedded .back-link {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -64,7 +77,7 @@
     <h2>2. Use of the App</h2>
     <ul>
       <li><strong>Local Processing:</strong> All event data and settings are stored locally in your browser (using Local Storage) unless you explicitly choose to export or sync them.</li>
-      <li><strong>Responsibility for Data:</strong> You are solely responsible for the accuracy of the dates and information you and the backup of your data. Clearing your browser's data may result in the loss of your locally stored app information.</li>
+      <li><strong>Responsibility for Data:</strong> You are solely responsible for the accuracy of the dates and information you enter, and for maintaining backups of your data when needed. Clearing your browser's data may result in the loss of your locally stored app information.</li>
       <li><strong>Intended Use:</strong> The application is intended for personal and non-commercial use.</li>
     </ul>
 
@@ -72,7 +85,7 @@
     <p>HC4GC offers an optional feature to automatically sync your generated events with your Google Calendar.</p>
     <ul>
       <li><strong>Granting Access:</strong> To enable this, you must grant the app permission to manage your calendars and events via Google OAuth.</li>
-      <li><strong>Data Handling during Sync:</strong> The app uses a temporary access token to perform the exact actions you authorize, such as reading calendar names, creating new calendars, or adding/updating events.</li>
+      <li><strong>Data Handling during Sync:</strong> The app uses a temporary Google OAuth access token kept only for the active sync flow to perform the exact actions you authorize, such as reading calendar names, creating new calendars, or adding/updating events. HC4GC does not operate a backend server to store that token or your Google Calendar data.</li>
       <li><strong>Existing Calendars warning:</strong> The application will warn you if it is about to override or delete an existing calendar sharing the same name as the one you are targeting. You are responsible for ensuring that critical data is not inadvertently modified or deleted during the sync process.</li>
       <li><strong>Third-Party Terms:</strong> Your use of the Google Calendar API and Google OAuth is also subject to Google's Terms of Service and Privacy Policy.</li>
     </ul>
@@ -90,7 +103,7 @@
     </ul>
 
     <h2>6. Privacy</h2>
-    <p>Your privacy is important. Please review our <a href="../privacy">Privacy Policy</a> to understand how we handle information, particularly that all data remains local to your device and how third-party connections are managed.</p>
+    <p>Your privacy is important. Please review our <a href="../privacy/index.html">Privacy Policy</a> to understand how we handle information, including disclosures about data sharing, data protection, and retention/deletion.</p>
 
     <h2>7. Changes to the Terms</h2>
     <p>We reserve the right to modify these Terms of Service at any time. Changes will take effect immediately upon being posted on this page. Your continued use of the application after any changes indicates your acceptance of the new terms.</p>
@@ -101,5 +114,13 @@
 
     <a class="back-link" href="../">&larr; Back to Application</a>
   </div>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('embedded') === '1' || window.self !== window.top) {
+        document.documentElement.classList.add('embedded');
+      }
+    })();
+  </script>
 </body>
 </html>

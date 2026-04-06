@@ -10,6 +10,7 @@ import { cn } from './lib/utils';
 import { CalendarEvent } from './types';
 import HelpSupportView from './components/HelpSupportView';
 import PrivacyView from './components/PrivacyView';
+import TermsView from './components/TermsView';
 import AppShellSidebar, { AppTabId } from './components/AppShellSidebar';
 import AppTopBar from './components/AppTopBar';
 import DashboardView from './views/DashboardView';
@@ -20,12 +21,13 @@ import { usePersistedAppState } from './hooks/usePersistedAppState';
 import { useAppActions } from './hooks/useAppActions';
 
 const TAB_TITLES: Record<AppTabId, string> = {
-  dashboard: 'יומן עברי ליומן גוגל',
-  calendar: 'לוח שנה',
-  'add-event': 'הוספת אירוע',
-  'import-export': 'ייצוא וייבוא',
-  support: 'תמיכה ועזרה',
-  privacy: 'מדיניות פרטיות',
+  dashboard: 'יו���� עברי ��יו���� גוג��',
+  calendar: '��וח שנה',
+  'add-event': 'הוספת ��ירוע',
+  'import-export': 'ייצו�� וייבו��',
+  support: 'ת��יכה ועזרה',
+  privacy: '��דיניות פרטיות',
+  terms: '���� �����',
 };
 
 export default function App() {
@@ -61,7 +63,7 @@ export default function App() {
 
   const requestTabChange = (nextTab: AppTabId) => {
     if (activeTab === 'import-export' && isImportExportSyncing && nextTab !== 'import-export') {
-      const shouldLeave = window.confirm('הסנכרון ליומן גוגל עדיין פעיל. יציאה ממסך זה תעצור את התהליך. להמשיך?');
+      const shouldLeave = window.confirm('הסנכרו�� ��יו���� גוג�� עדיי�� פעי��. יצי��ה ����ס�� זה תעצור ��ת התה��י��. ��ה��שי��?');
       if (!shouldLeave) {
         return;
       }
@@ -107,6 +109,7 @@ export default function App() {
     ),
     support: <HelpSupportView />,
     privacy: <PrivacyView />,
+    terms: <TermsView />,
   };
 
   return (
