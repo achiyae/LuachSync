@@ -1,5 +1,7 @@
 import React from 'react';
-import { HelpCircle, Menu } from 'lucide-react';
+import { Github, HelpCircle, Menu } from 'lucide-react';
+
+const REPOSITORY_URL = 'https://github.com/achiyae/HebrewCalendar';
 
 type AppTopBarProps = {
   title: string;
@@ -22,6 +24,16 @@ const AppTopBar = ({ title, onOpenMobileMenu, onOpenSupport }: AppTopBarProps) =
         <h1 className="text-xl font-bold tracking-tight text-blue-900">{title}</h1>
       </div>
       <div className="flex items-center gap-4">
+        <a
+          href={REPOSITORY_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="GitHub repository"
+          aria-label="GitHub repository"
+          className="p-2 rounded-full hover:bg-slate-200/50 transition-colors text-slate-500"
+        >
+          <Github size={20} />
+        </a>
         <button
           onClick={onOpenSupport}
           title="תמיכה"

@@ -21,13 +21,13 @@ import { usePersistedAppState } from './hooks/usePersistedAppState';
 import { useAppActions } from './hooks/useAppActions';
 
 const TAB_TITLES: Record<AppTabId, string> = {
-  dashboard: 'יו���� עברי ��יו���� גוג��',
-  calendar: '��וח שנה',
-  'add-event': 'הוספת ��ירוע',
-  'import-export': 'ייצו�� וייבו��',
-  support: 'ת��יכה ועזרה',
-  privacy: '��דיניות פרטיות',
-  terms: '���� �����',
+  dashboard: 'יומן עברי ליומן גוגל',
+  calendar: 'לוח שנה',
+  'add-event': 'הוספת אירוע',
+  'import-export': 'ייצוא וייבוא',
+  support: 'תמיכה ועזרה',
+  privacy: 'מדיניות פרטיות',
+  terms: 'תנאי שימוש',
 };
 
 export default function App() {
@@ -63,7 +63,7 @@ export default function App() {
 
   const requestTabChange = (nextTab: AppTabId) => {
     if (activeTab === 'import-export' && isImportExportSyncing && nextTab !== 'import-export') {
-      const shouldLeave = window.confirm('הסנכרו�� ��יו���� גוג�� עדיי�� פעי��. יצי��ה ����ס�� זה תעצור ��ת התה��י��. ��ה��שי��?');
+      const shouldLeave = window.confirm('הסנכרון ליומן גוגל עדיין פעיל. יציאה עכשיו תעצור את התהליך. להמשיך?');
       if (!shouldLeave) {
         return;
       }
