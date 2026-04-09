@@ -25,6 +25,10 @@ Example:
 - If you enter a Hebrew birthday such as 1 Nisan 5740, LuachSync computes when that birthday falls each year in the Gregorian calendar and creates the recurring series for up to 100 years.
 - With Google sync, LuachSync creates a new calendar in your Google account and inserts those calculated Gregorian birthday events into that calendar.
 
+## Credits
+
+Hebrew calendar calculations are powered by Hebcal: <https://github.com/hebcal>
+
 ## Public Privacy Policy
 
 See the privacy policy at: <https://luachsync.elyasaf.net/privacy>
