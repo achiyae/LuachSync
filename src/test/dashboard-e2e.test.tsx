@@ -1,12 +1,25 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Location } from '@hebcal/core';
 import App from '../App';
 import { addEventFromForm, goToMiniCalendarMonth, openDashboard } from './e2e-helpers';
 
 describe('Dashboard e2e flow', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it('keeps the dashboard usable when Hebcal time formatter creation returns an invalid formatter', async () => {
+    vi.spyOn(Location.prototype, 'getTimeFormatter').mockReturnValue({} as Intl.DateTimeFormat);
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(<App />);
+
+    expect(await screen.findByTestId('dashboard-daily-hebrew-date')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'אירוע חדש' })).toBeInTheDocument();
+    expect(consoleErrorSpy).toHaveBeenCalled();
   });
 
   it('shows dot only on 12 September 2026 and updates daily view title after click', async () => {

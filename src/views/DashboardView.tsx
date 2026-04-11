@@ -6,6 +6,11 @@ import { he } from 'date-fns/locale';
 import { cn } from '../lib/utils';
 import { getHebrewMonthSpan, hebrewMonthsMap } from '../lib/helpers';
 import { CalendarEvent } from '../types';
+
+const FALLBACK_TIME = '--:--';
+
+const safeFormatClockTime = (date: Date | null | undefined) => date ? format(date, 'HH:mm') : FALLBACK_TIME;
+
 const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { events: CalendarEvent[], onAddClick: () => void, onEdit: (e: CalendarEvent) => void, onDelete: (id: string) => void, onClearAll: () => void }) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -87,48 +92,65 @@ const DashboardView = ({ events, onAddClick, onEdit, onDelete, onClearAll }: { e
   };
 
   const shabbatZmanim = useMemo(() => {
-    const sun = addDays(selectedDate, -getDay(selectedDate));
-    const sat = addDays(selectedDate, 6 - getDay(selectedDate));
-    const loc = new Location(locationState.lat, locationState.long, true, locationState.tz, locationState.name, 'IL');
-    const options = {
-      start: sun,
-      end: sat,
-      candlelighting: true,
-      location: loc,
-      il: true,
-    };
-    const evs = HebrewCalendar.calendar(options);
-    const formatTimeStr = (d: Date | undefined) => d ? format(d, 'HH:mm') : '--:--';
-    
-    let candle = '--:--';
-    let havdalah = '--:--';
-    
-    for (const ev of evs) {
-      const desc = ev.getDesc();
-      if (desc === 'Candle lighting') {
-        // @ts-ignore
-        candle = formatTimeStr(ev.eventTime);
-      } else if (desc === 'Havdalah') {
-        // @ts-ignore
-        havdalah = formatTimeStr(ev.eventTime);
+    try {
+      const sun = addDays(selectedDate, -getDay(selectedDate));
+      const sat = addDays(selectedDate, 6 - getDay(selectedDate));
+      const loc = new Location(locationState.lat, locationState.long, true, locationState.tz, locationState.name, 'IL');
+      const options = {
+        start: sun,
+        end: sat,
+        candlelighting: true,
+        location: loc,
+        il: true,
+      };
+      const evs = HebrewCalendar.calendar(options);
+
+      let candle = FALLBACK_TIME;
+      let havdalah = FALLBACK_TIME;
+
+      for (const ev of evs) {
+        const desc = ev.getDesc();
+        if (desc === 'Candle lighting') {
+          // @ts-ignore
+          candle = safeFormatClockTime(ev.eventTime);
+        } else if (desc === 'Havdalah') {
+          // @ts-ignore
+          havdalah = safeFormatClockTime(ev.eventTime);
+        }
       }
+
+      return { candle, havdalah };
+    } catch (error) {
+      console.error('Failed to calculate Shabbat zmanim', error);
+      return { candle: FALLBACK_TIME, havdalah: FALLBACK_TIME };
     }
-    return { candle, havdalah };
   }, [selectedDate, locationState]);
 
   const zmanim = useMemo(() => {
-    const loc = new Location(locationState.lat, locationState.long, true, locationState.tz, locationState.name, 'IL');
-    const z = new Zmanim(loc, selectedDate, false);
-    const formatTime = (d: Date | null) => d ? format(d, 'HH:mm') : '--:--';
-    return {
-      alotHaShachar: formatTime(z.alotHaShachar()),
-      netzHaChama: formatTime(z.neitzHaChama()),
-      sofZmanKriasShema: formatTime(z.sofZmanShmaMGA()),
-      chatzos: formatTime(z.chatzot()),
-      shkiya: formatTime(z.shkiah()),
-      candleLighting: shabbatZmanim.candle,
-      havdalah: shabbatZmanim.havdalah
-    };
+    try {
+      const loc = new Location(locationState.lat, locationState.long, true, locationState.tz, locationState.name, 'IL');
+      const z = new Zmanim(loc, selectedDate, false);
+      return {
+        alotHaShachar: safeFormatClockTime(z.alotHaShachar()),
+        netzHaChama: safeFormatClockTime(z.neitzHaChama()),
+        sofZmanKriasShema: safeFormatClockTime(z.sofZmanShmaMGA()),
+        chatzos: safeFormatClockTime(z.chatzot()),
+        shkiya: safeFormatClockTime(z.shkiah()),
+        candleLighting: shabbatZmanim.candle,
+        havdalah: shabbatZmanim.havdalah
+      };
+    } catch (error) {
+      console.error('Failed to calculate daily zmanim', error);
+      return {
+        alotHaShachar: FALLBACK_TIME,
+        netzHaChama: FALLBACK_TIME,
+        sofZmanKriasShema: FALLBACK_TIME,
+        chatzos: FALLBACK_TIME,
+        shkiya: FALLBACK_TIME,
+        candleLighting: shabbatZmanim.candle,
+        havdalah: shabbatZmanim.havdalah
+      };
+    }
   }, [selectedDate, locationState, shabbatZmanim]);
 
   return (
