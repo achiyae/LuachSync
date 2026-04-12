@@ -53,7 +53,7 @@ const AppShellSidebar = ({
             <div className="flex items-center gap-3">
               <div>
                 <h2 className="font-bold text-blue-900 leading-tight">LuachSync</h2>
-                <p className="text-[10px] uppercase tracking-widest text-slate-500 opacity-70">מערכת לוח שנה עברי</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500 opacity-70">לוח שנה עברי ליומן גוגל</p>
               </div>
             </div>
           )}

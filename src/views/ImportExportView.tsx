@@ -1201,6 +1201,43 @@ END:VCALENDAR`;
         <div className="col-span-12 lg:col-span-5 space-y-6">
 
           <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-right">
+            <div className="flex items-center gap-3 mb-4">
+              <ArrowLeftRight className="text-blue-600" size={20} />
+              <h3 className="font-bold text-lg">סנכרון אוטומטי עם יומן גוגל</h3>
+            </div>
+            {/* <p className="text-sm text-slate-600 leading-relaxed text-right">
+              זו הדרך הקלה ביותר לסנכרון עם יומן גוגל.
+            </p> */}
+
+            <div className="mt-4">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">שם היומן בגוגל לסנכרון</label>
+              <input
+                type="text"
+                value={targetCalendarName}
+                onChange={(e) => setTargetCalendarName(e.target.value)}
+                disabled={isGoogleSyncing}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-sm text-right focus:ring-2 focus:ring-blue-500/20"
+                placeholder="למשל: HebrewCalendar משפחה"
+              />
+            </div>
+
+            <button onClick={handleGoogleCalendarSync} disabled={isGoogleSyncing} className={cn("mt-4 w-full bg-gradient-to-r from-blue-600 to-blue-800 p-4 rounded-xl text-white font-bold flex items-center justify-center gap-3 shadow-lg transition-all group", isGoogleSyncing ? "opacity-60 cursor-not-allowed" : "active:scale-[0.98]")}>
+              <ArrowLeftRight className="group-hover:rotate-6 transition-transform" size={20} />
+              {isGoogleSyncing ? 'מסנכרן ליומן חדש...' : 'סנכרון אוטומטי ליומן חדש'}
+            </button>
+
+            {googleSyncStatus && <p className="text-center mt-3 text-[11px] text-blue-600 font-semibold">{googleSyncStatus}</p>}
+
+            <div className="mt-4 flex gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-right">
+              <Info className="text-amber-700 shrink-0" size={18} />
+              <p className="text-xs text-amber-900 leading-relaxed">
+                גישה זו יוצרת יומן חדש בשם שייבחר. אם כבר קיים יומן בשם הזה, הוא יימחק קודם.<br/>
+                בגלל מגבלות של גוגל, התהליך לוקח כדקה לכל אירוע.
+              </p>
+            </div>
+           </section>
+
+          <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-right">
             <div className="flex items-center gap-3 mb-6">
                <ArrowLeftRight className="text-blue-600" size={20} />
               <h3 className="font-bold text-lg">הגדרות ייצוא</h3>
@@ -1256,43 +1293,6 @@ END:VCALENDAR`;
                   ))}
                 </div>
               </div>
-            </div>
-           </section>
-
-          <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-right">
-            <div className="flex items-center gap-3 mb-4">
-              <ArrowLeftRight className="text-blue-600" size={20} />
-              <h3 className="font-bold text-lg">סנכרון אוטומטי עם יומן גוגל</h3>
-            </div>
-            <p className="text-sm text-slate-600 leading-relaxed text-right">
-              זו הדרך הקלה ביותר לסנכרון עם יומן גוגל.
-            </p>
-
-            <div className="mt-4">
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">שם היומן בגוגל לסנכרון</label>
-              <input
-                type="text"
-                value={targetCalendarName}
-                onChange={(e) => setTargetCalendarName(e.target.value)}
-                disabled={isGoogleSyncing}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-sm text-right focus:ring-2 focus:ring-blue-500/20"
-                placeholder="למשל: HebrewCalendar משפחה"
-              />
-            </div>
-
-            <button onClick={handleGoogleCalendarSync} disabled={isGoogleSyncing} className={cn("mt-4 w-full bg-gradient-to-r from-blue-600 to-blue-800 p-4 rounded-xl text-white font-bold flex items-center justify-center gap-3 shadow-lg transition-all group", isGoogleSyncing ? "opacity-60 cursor-not-allowed" : "active:scale-[0.98]")}>
-              <ArrowLeftRight className="group-hover:rotate-6 transition-transform" size={20} />
-              {isGoogleSyncing ? 'מסנכרן ליומן חדש...' : 'סנכרון אוטומטי ליומן חדש'}
-            </button>
-
-            {googleSyncStatus && <p className="text-center mt-3 text-[11px] text-blue-600 font-semibold">{googleSyncStatus}</p>}
-
-            <div className="mt-4 flex gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-right">
-              <Info className="text-amber-700 shrink-0" size={18} />
-              <p className="text-xs text-amber-900 leading-relaxed">
-                גישה זו יוצרת יומן חדש בשם שייבחר. אם כבר קיים יומן בשם הזה, הוא יימחק קודם.<br/>
-                בגלל מגבלות של גוגל, התהליך לוקח בערך דקה לכל אירוע.
-              </p>
             </div>
            </section>
 

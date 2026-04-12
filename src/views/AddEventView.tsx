@@ -164,7 +164,7 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
     <div className="p-8 max-w-4xl mx-auto">
       <div className="mb-10">
         <h2 className="text-4xl font-extrabold text-slate-900 mt-1">רישום אירוע חדש במעגל החיים</h2>
-        <p className="text-slate-500 mt-2 max-w-xl">סנכרן אבני דרך אישיות עם מחזור הירח והשמש העברי. חישובים אסטרונומיים מדויקים יוחלו בהתאם לבחירת האזור שלך.</p>
+        {/* <p className="text-slate-500 mt-2 max-w-xl">סנכרן אבני דרך אישיות עם מחזור הירח והשמש העברי. חישובים אסטרונומיים מדויקים יוחלו בהתאם לבחירת האזור שלך.</p> */}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
@@ -354,7 +354,7 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
             ))}
           </div>
           <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900 leading-relaxed">
-            <strong className="font-bold">שים לב:</strong> הגדרת "השתמש בהגדרת הייצוא" תחיל את בחירת התזכורות הגלובלית מדף הייצוא. כל בחירה אחרת כאן תגבר עליה.
+            <strong className="font-bold">שימו לב:</strong> הגדרת "השתמש בהגדרת הייצוא" תחיל את בחירת התזכורות הגלובלית מדף הייצוא. כל בחירה אחרת כאן תגבר עליה.
           </div>
         </section>
 

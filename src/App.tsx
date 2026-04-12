@@ -21,7 +21,7 @@ import { usePersistedAppState } from './hooks/usePersistedAppState';
 import { useAppActions } from './hooks/useAppActions';
 
 const TAB_TITLES: Record<AppTabId, string> = {
-  dashboard: 'יומן עברי ליומן גוגל',
+  dashboard: 'לוח שנה עברי ליומן גוגל',
   calendar: 'לוח שנה',
   'add-event': 'הוספת אירוע',
   'import-export': 'ייצוא וייבוא',
