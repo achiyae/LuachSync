@@ -1194,7 +1194,7 @@ END:VCALENDAR`;
       <div className="mb-8 text-right">
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">כלי ניהול נתונים</p>
         <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-2">ייצוא וייבוא נתוני לוח שנה</h1>
-        <p className="text-slate-500 max-w-2xl">נהל את המידע הליטורגי שלך בדיוק מרבי. הורד וייבא נתונים בפורמט iCalendar (ICS) לעבודה מול יומן גוגל.</p>
+        <p className="text-slate-500 max-w-2xl">ניהול המידע הליטורגי. סנכרון עם יומן גוגל, גיבוי ושחזור נתונים.</p>
       </div>
 
       <div className="grid grid-cols-12 gap-6 items-start">
