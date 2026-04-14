@@ -102,6 +102,57 @@ export const getEventTypeSyncLabel = (type: string): string => {
   return type;
 };
 
+// Month-number map used by HDate.daysInMonth (must match @hebcal/core internals).
+const ENGLISH_MONTH_TO_NUM: Record<string, number> = {
+  'Nisan': 1, 'Iyyar': 2, 'Sivan': 3, 'Tamuz': 4, 'Av': 5, 'Elul': 6,
+  'Tishrei': 7, 'Cheshvan': 8, 'Heshvan': 8, 'Kislev': 9, 'Tevet': 10,
+  'Shvat': 11, "Sh'vat": 11, 'Adar 1': 12, 'Adar I': 12, 'Adar': 12,
+  'Adar 2': 13, 'Adar II': 13,
+};
+
+/**
+ * Returns `occurrences` Gregorian dates for successive Hebrew years, starting
+ * from `baseYear`.  Instead of skipping years where the date is invalid:
+ *   • Adar II in a non-leap year  → falls on Adar I
+ *   • Day 30 in a month with only 29 days → falls on day 29
+ */
+export const computeHebrewOccurrenceDates = (
+  day: number,
+  month: string,       // Hebrew month name, e.g. 'אדר ב׳'
+  baseYear: number,
+  occurrences: number,
+  afterSunset = false,
+): Date[] => {
+  const englishMonth = hebrewToEnglishMonth[month] || 'Nisan';
+  const isAdarII = englishMonth === 'Adar 2';
+  const dates: Date[] = [];
+
+  for (let i = 0; i < occurrences; i++) {
+    const targetYear = baseYear + i;
+
+    // Fallback: Adar II in a non-leap year → use Adar I
+    let resolvedMonth = englishMonth;
+    if (isAdarII && !HDate.isLeapYear(targetYear)) {
+      resolvedMonth = 'Adar 1';
+    }
+
+    // Fallback: day exceeds days in the resolved month → use the last valid day
+    const monthNum = ENGLISH_MONTH_TO_NUM[resolvedMonth];
+    const maxDay = monthNum !== undefined ? HDate.daysInMonth(monthNum, targetYear) : day;
+    const resolvedDay = Math.min(day, maxDay);
+
+    try {
+      const hd = new HDate(resolvedDay, resolvedMonth, targetYear);
+      const targetHd = afterSunset ? hd.prev() : hd;
+      dates.push(targetHd.greg());
+    } catch {
+      // Should not happen after fallback; skip only if truly unresolvable.
+    }
+  }
+
+  return dates;
+};
+
 export const escapeIcsText = (value: string): string => value
   .replace(/\\/g, '\\\\')
   .replace(/;/g, '\\;')

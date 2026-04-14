@@ -6,6 +6,7 @@ import { addDays, format } from 'date-fns';
 import { cn } from '../lib/utils';
 import {
   buildReminderRules,
+  computeHebrewOccurrenceDates,
   escapeIcsText,
   getGregorianDateFromHebrewInput,
   getEventTypeLabel,
@@ -227,7 +228,8 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
           const importedSettings: ExportSettingsState = {
             selectedSchema: 'ics',
             reminderMode: 'none',
-            selectedEventTypes: []
+            selectedEventTypes: [],
+            occurrences: 100
           };
 
           let currentEvent: Partial<CalendarEvent> | null = null;
@@ -239,6 +241,11 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
                 .split(',')
                 .map(t => t.trim())
                 .filter(t => !!t && t !== 'none');
+            } else if (trimmed.startsWith('X-EXPORT-OCCURRENCES:')) {
+              const parsed = parseInt(trimmed.substring('X-EXPORT-OCCURRENCES:'.length), 10);
+              if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 500) {
+                importedSettings.occurrences = parsed;
+              }
             } else if (trimmed.startsWith('X-EXPORT-REMINDER-MODE:')) {
               importedSettings.reminderMode = normalizeReminderMode(trimmed.substring('X-EXPORT-REMINDER-MODE:'.length));
             } else if (trimmed === 'BEGIN:VEVENT') {
@@ -460,19 +467,14 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
       const exportBaseId = normalizeExportBaseId(event.id);
       const description = buildGeneratedEventDescription(event);
 
-      for (let i = 0; i < 100; i++) {
-        const targetHebrewYear = event.hebrewDate.year + i;
-        const eventDate = getGregorianDateFromHebrewInput(
-          event.hebrewDate.day,
-          event.hebrewDate.month,
-          gematriya(targetHebrewYear),
-          !!event.hebrewDate.afterSunset
-        );
-        if (!eventDate) {
-          // Skip years where this Hebrew date does not exist.
-          continue;
-        }
-
+      const occurrenceDates = computeHebrewOccurrenceDates(
+        event.hebrewDate.day,
+        event.hebrewDate.month,
+        event.hebrewDate.year,
+        exportSettings.occurrences,
+        !!event.hebrewDate.afterSunset
+      );
+      occurrenceDates.forEach((eventDate, i) => {
         generated.push({
           summary: `${eventTypeLabel} ל${event.title} (${i})`,
           description,
@@ -481,11 +483,11 @@ const ImportExportView = ({ events, onImport, exportSettings, onExportSettingsCh
           reminders,
           iCalUID: `${exportBaseId}-${i}@luachsync-import`
         });
-      }
+      });
     }
 
     return generated;
-  }, [exportEvents, reminderMode]);
+  }, [exportEvents, reminderMode, exportSettings.occurrences]);
 
   const icsConfigEvents = exportEvents.map(e => {
     const exportBaseId = normalizeExportBaseId(e.id);
@@ -522,34 +524,27 @@ ${reminderSection}END:VEVENT`;
     const eventReminderRules = getEventReminderRules(e);
     const eventTypeLabel = getEventTypeSyncLabel(e.type);
     const description = buildGeneratedEventDescription(e);
-    const eventsForHundredYears: string[] = [];
 
-    for (let i = 0; i < 100; i++) {
-      const occurrence = i;
-      const targetHebrewYear = e.hebrewDate.year + i;
+    const occurrenceDates = computeHebrewOccurrenceDates(
+      e.hebrewDate.day,
+      e.hebrewDate.month,
+      e.hebrewDate.year,
+      exportSettings.occurrences,
+      !!e.hebrewDate.afterSunset
+    );
 
-      const eventDate = getGregorianDateFromHebrewInput(
-        e.hebrewDate.day,
-        e.hebrewDate.month,
-        gematriya(targetHebrewYear),
-        !!e.hebrewDate.afterSunset
-      );
-      if (!eventDate) {
-        // Skip invalid dates in years where the Hebrew date does not exist.
-        continue;
-      }
-
+    return occurrenceDates.map((eventDate, occurrence) => {
       const dtStart = formatIcsDate(eventDate);
       const dtEnd = formatIcsDate(addDays(eventDate, 1));
       const dtStamp = formatIcsUtcDateTime(new Date());
       const summary = `${eventTypeLabel} ל${e.title} (${occurrence})`;
       const escapedSummary = escapeIcsText(summary);
-  const escapedDescription = escapeIcsText(description);
+      const escapedDescription = escapeIcsText(description);
       const escapedCategory = escapeIcsText(e.type);
       const icsReminders = buildIcsReminders(summary, eventDate, eventReminderRules);
       const reminderSection = icsReminders ? `${icsReminders}\n` : '';
 
-      eventsForHundredYears.push(`BEGIN:VEVENT
+      return `BEGIN:VEVENT
 UID:${exportBaseId}-${occurrence}@luachsync
 DTSTAMP:${dtStamp}
 DTSTART;VALUE=DATE:${dtStart}
@@ -560,10 +555,8 @@ CATEGORIES:${escapedCategory}
 X-LuachSync-ENTRY-TYPE:GENERATED
 TRANSP:TRANSPARENT
 X-MICROSOFT-CDO-BUSYSTATUS:FREE
-${reminderSection}END:VEVENT`);
-    }
-
-    return eventsForHundredYears;
+${reminderSection}END:VEVENT`;
+    });
   }).join('\n');
 
   const icsGlobalReminderIds = reminderRules.map(rule => rule.id).join(',') || 'none';
@@ -576,6 +569,7 @@ X-EXPORT-SCHEMA:${selectedSchema.toUpperCase()}
 X-EXPORT-EVENT-TYPES:${selectedEventTypes.join(',') || 'none'}
 X-EXPORT-REMINDER-MODE:${reminderMode}
 X-EXPORT-REMINDERS:${icsGlobalReminderIds}
+X-EXPORT-OCCURRENCES:${exportSettings.occurrences}
 ${icsConfigEvents}
 ${icsGeneratedEvents}
 END:VCALENDAR`;
@@ -1292,6 +1286,22 @@ END:VCALENDAR`;
                     </button>
                   ))}
                 </div>
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-3">מספר שנים קדימה</label>
+                <input
+                  data-testid="occurrences-input"
+                  type="number"
+                  min={1}
+                  max={500}
+                  value={exportSettings.occurrences}
+                  onChange={(e) => {
+                    const val = Math.max(1, Math.min(500, parseInt(e.target.value, 10) || 1));
+                    onExportSettingsChange(prev => ({ ...prev, occurrences: val }));
+                  }}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-sm text-right focus:ring-2 focus:ring-blue-500/20"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">מספר השנים לייצא קדימה עבור כל אירוע (1–500)</p>
               </div>
             </div>
            </section>

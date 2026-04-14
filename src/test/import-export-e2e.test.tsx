@@ -134,4 +134,92 @@ describe('Import/export e2e flow', () => {
     expect(previewText).toMatch(/SUMMARY:ישראל ישראלי[\s\S]*?X-EFFECTIVE-REMINDER-MODE:week-before/);
     expect(previewText).toMatch(/SUMMARY:משה לוי[\s\S]*?X-EFFECTIVE-REMINDER-MODE:both/);
   });
+
+  it('generates exactly the configured number of occurrences in ICS preview', async () => {
+    const user = userEvent.setup();
+
+    window.localStorage.setItem('luachsync.appState.v1', JSON.stringify({
+      events: [
+        {
+          id: 'event-occ',
+          title: 'Test Occurrences',
+          type: 'birthday',
+          hebrewDate: {
+            day: 1,
+            month: 'תשרי',
+            year: 5786,
+            afterSunset: false,
+          },
+        },
+      ],
+      exportSettings: {
+        selectedSchema: 'ics',
+        reminderMode: 'none',
+        selectedEventTypes: ['birthday'],
+        occurrences: 3,
+      },
+    }));
+
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'ייצוא וייבוא' }));
+    await screen.findByRole('heading', { name: 'ייצוא וייבוא נתוני לוח שנה' });
+
+    await user.click(screen.getByRole('button', { name: /תצוגה מקדימה של ICS/i }));
+
+    const previewText = screen.getByText((content, element) => (
+      element?.tagName.toLowerCase() === 'code' && content.includes('BEGIN:VCALENDAR')
+    )).textContent || '';
+
+    // Should contain exactly 3 GENERATED entries
+    const generatedMatches = previewText.match(/X-LuachSync-ENTRY-TYPE:GENERATED/g);
+    expect(generatedMatches).toHaveLength(3);
+
+    // Should write the occurrences count to the ICS header
+    expect(previewText).toContain('X-EXPORT-OCCURRENCES:3');
+  });
+
+  it('Adar II occurrences in non-leap years are not skipped but fall on Adar I', async () => {
+    const user = userEvent.setup();
+
+    // Hebrew year 5784 is a leap year (has Adar II).
+    // 5785 is NOT a leap year → Adar II events should fall on Adar I instead of being skipped.
+    // We request 2 occurrences so we get both: 5784 (Adar II) and 5785 (Adar I fallback).
+    window.localStorage.setItem('luachsync.appState.v1', JSON.stringify({
+      events: [
+        {
+          id: 'event-adar2',
+          title: 'Adar Test',
+          type: 'birthday',
+          hebrewDate: {
+            day: 15,
+            month: 'אדר ב׳',
+            year: 5784,
+            afterSunset: false,
+          },
+        },
+      ],
+      exportSettings: {
+        selectedSchema: 'ics',
+        reminderMode: 'none',
+        selectedEventTypes: ['birthday'],
+        occurrences: 2,
+      },
+    }));
+
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'ייצוא וייבוא' }));
+    await screen.findByRole('heading', { name: 'ייצוא וייבוא נתוני לוח שנה' });
+
+    await user.click(screen.getByRole('button', { name: /תצוגה מקדימה של ICS/i }));
+
+    const previewText = screen.getByText((content, element) => (
+      element?.tagName.toLowerCase() === 'code' && content.includes('BEGIN:VCALENDAR')
+    )).textContent || '';
+
+    // 2 occurrences requested → 2 GENERATED entries (no skips)
+    const generatedMatches = previewText.match(/X-LuachSync-ENTRY-TYPE:GENERATED/g);
+    expect(generatedMatches).toHaveLength(2);
+  });
 });

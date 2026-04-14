@@ -4,6 +4,7 @@ import { HDate } from '@hebcal/core';
 import { format } from 'date-fns';
 import {
   buildReminderRules,
+  computeHebrewOccurrenceDates,
   escapeIcsText,
   getEventTypeLabel,
   getEventTypeSyncLabel,
@@ -267,5 +268,70 @@ describe('getHebrewInputFromGregorianDate', () => {
     expect(before).not.toBeNull();
     expect(after).not.toBeNull();
     expect(after?.getDate()).toBeGreaterThan(before!.getDate());
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeHebrewOccurrenceDates
+// ---------------------------------------------------------------------------
+describe('computeHebrewOccurrenceDates', () => {
+  it('returns empty array for 0 occurrences', () => {
+    const dates = computeHebrewOccurrenceDates(1, 'ניסן', 5786, 0);
+    expect(dates).toHaveLength(0);
+  });
+
+  it('returns exactly N dates for N occurrences', () => {
+    const dates = computeHebrewOccurrenceDates(1, 'תשרי', 5786, 5);
+    expect(dates).toHaveLength(5);
+    dates.forEach(d => expect(d).toBeInstanceOf(Date));
+  });
+
+  it('returns dates in ascending order', () => {
+    const dates = computeHebrewOccurrenceDates(1, 'ניסן', 5786, 3);
+    for (let i = 1; i < dates.length; i++) {
+      expect(dates[i].getTime()).toBeGreaterThan(dates[i - 1].getTime());
+    }
+  });
+
+  it('applies afterSunset offset (shifts date back by one Gregorian day)', () => {
+    const withoutSunset = computeHebrewOccurrenceDates(1, 'תשרי', 5786, 1, false);
+    const withSunset = computeHebrewOccurrenceDates(1, 'תשרי', 5786, 1, true);
+    expect(withoutSunset).toHaveLength(1);
+    expect(withSunset).toHaveLength(1);
+    const diff = withoutSunset[0].getTime() - withSunset[0].getTime();
+    expect(diff).toBe(24 * 60 * 60 * 1000); // exactly one day earlier
+  });
+
+  it('Adar II event falls on Adar I in non-leap years instead of being skipped', () => {
+    // Hebrew year 5786 is NOT a leap year; 5784 IS a leap year.
+    // Starting from 5784 (leap), first occurrence is Adar II.
+    // 5785 is NOT a leap year → should fall back to Adar I, not be skipped.
+    // 5786 is NOT a leap year → same fallback.
+    const dates = computeHebrewOccurrenceDates(15, 'אדר ב׳', 5784, 3);
+    // Should produce 3 dates (no skips).
+    expect(dates).toHaveLength(3);
+    // Year 5784 (leap): 15 Adar II
+    const hd5784 = new HDate(15, 'Adar 2', 5784);
+    expect(format(dates[0], 'yyyy-MM-dd')).toBe(format(hd5784.greg(), 'yyyy-MM-dd'));
+    // Year 5785 (non-leap): falls on 15 Adar I
+    const hd5785 = new HDate(15, 'Adar 1', 5785);
+    expect(format(dates[1], 'yyyy-MM-dd')).toBe(format(hd5785.greg(), 'yyyy-MM-dd'));
+  });
+
+  it('day 30 falls on day 29 in months with only 29 days instead of being skipped', () => {
+    // Adar (non-leap) always has exactly 29 days.
+    // 5786 is NOT a leap year, so Adar has 29 days.
+    // Requesting day 30 of Adar 5786 should fall back to day 29 (not skip, not overflow).
+    const dates = computeHebrewOccurrenceDates(30, 'אדר', 5786, 1);
+    expect(dates).toHaveLength(1);
+    const hd = new HDate(dates[0]);
+    // Must stay in Adar (day 30 capped to 29), not overflow into Nisan.
+    expect(hd.getMonthName()).toMatch(/^Adar/);
+    expect(hd.getDate()).toBe(29);
+  });
+
+  it('returns 100 dates by default when occurrences is 100', () => {
+    const dates = computeHebrewOccurrenceDates(1, 'ניסן', 5786, 100);
+    expect(dates).toHaveLength(100);
   });
 });
