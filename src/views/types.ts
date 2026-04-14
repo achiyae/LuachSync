@@ -4,6 +4,7 @@ export type ExportSettingsState = {
   selectedSchema: 'ics';
   reminderMode: Exclude<ReminderMode, 'use-export-default'>;
   selectedEventTypes: string[];
+  occurrences: number;
 };
 
 export type PersistedAppState = {
@@ -19,5 +20,6 @@ export type ImportPayload = {
 export const DEFAULT_EXPORT_SETTINGS: ExportSettingsState = {
   selectedSchema: 'ics',
   reminderMode: 'none',
-  selectedEventTypes: []
+  selectedEventTypes: [],
+  occurrences: 100
 };

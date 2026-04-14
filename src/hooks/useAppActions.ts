@@ -60,6 +60,7 @@ export const useAppActions = ({
         selectedSchema: payload.exportSettings.selectedSchema,
         reminderMode: payload.exportSettings.reminderMode,
         selectedEventTypes: payload.exportSettings.selectedEventTypes,
+        occurrences: payload.exportSettings.occurrences,
       });
     }
     alert(`יובאו בהצלחה ${payload.events.length} אירועים!`);

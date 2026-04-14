@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx vitest:*)",
+      "Bash(node --trace-warnings -e ':*)",
+      "Bash(git push:*)"
+    ]
+  }
+}

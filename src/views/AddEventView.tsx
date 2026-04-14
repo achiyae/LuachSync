@@ -251,55 +251,71 @@ const AddEventView = ({ events, initialData, onSave, onCancel }: { events: Calen
           </div>
           
           {formData.dateMode === 'hebrew' ? (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">חודש עברי</label>
-                <select 
-                  className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
-                  value={formData.month}
-                  onChange={(e) => setFormData({ ...formData, month: e.target.value })}
-                  required
-                >
-                  {months.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">חודש עברי</label>
+                  <select
+                    className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
+                    value={formData.month}
+                    onChange={(e) => setFormData({ ...formData, month: e.target.value })}
+                    required
+                  >
+                    {months.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">יום</label>
+                  <select
+                    className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
+                    value={formData.day}
+                    onChange={(e) => setFormData({ ...formData, day: parseInt(e.target.value) })}
+                    required
+                  >
+                    {Array.from({ length: 30 }).map((_, i) => (
+                      <option key={i+1} value={i+1}>{gematriya(i+1)}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">שנה עברית</label>
+                  <input
+                    data-testid="add-event-hebrew-year"
+                    className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm text-right"
+                    placeholder="תשפ״ו"
+                    value={formData.yearStr}
+                    onChange={(e) => setFormData({ ...formData, yearStr: e.target.value })}
+                    type="text"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">זמן</label>
+                   <select
+                    className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
+                    value={formData.afterSunset ? "after" : "before"}
+                    onChange={(e) => setFormData({ ...formData, afterSunset: e.target.value === "after" })}
+                    required
+                  >
+                    <option value="before">לפני השקיעה</option>
+                    <option value="after">אחרי השקיעה</option>
+                  </select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">יום</label>
-                <select 
-                  className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
-                  value={formData.day}
-                  onChange={(e) => setFormData({ ...formData, day: parseInt(e.target.value) })}
-                  required
-                >
-                  {Array.from({ length: 30 }).map((_, i) => (
-                    <option key={i+1} value={i+1}>{gematriya(i+1)}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">שנה עברית</label>
-                <input 
-                  data-testid="add-event-hebrew-year"
-                  className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm text-right"
-                  placeholder="תשפ״ו"
-                  value={formData.yearStr}
-                  onChange={(e) => setFormData({ ...formData, yearStr: e.target.value })}
-                  type="text"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">זמן</label>
-                 <select 
-                  className="w-full bg-slate-50 border-none rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none text-right"
-                  value={formData.afterSunset ? "after" : "before"}
-                  onChange={(e) => setFormData({ ...formData, afterSunset: e.target.value === "after" })}
-                  required
-                >
-                  <option value="before">לפני השקיעה</option>
-                  <option value="after">אחרי השקיעה</option>
-                </select>
-              </div>
+              {(formData.month === 'אדר ב׳' || formData.day === 30) && (
+                <div data-testid="hebrew-date-fallback-note" className="rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 text-xs text-blue-900 leading-relaxed">
+                  <strong className="font-bold">לתשומת לבך:</strong>{' '}
+                  {formData.month === 'אדר ב׳' && formData.day === 30 && (
+                    <>בשנים לא מעוברות, אירוע זה יחול באדר א׳. בשנים שבהן חודש אדר מכיל 29 ימים בלבד, יחול ביום כ״ט.</>
+                  )}
+                  {formData.month === 'אדר ב׳' && formData.day !== 30 && (
+                    <>בשנים לא מעוברות (שאין בהן אדר ב׳), אירוע זה יחול בחודש אדר א׳.</>
+                  )}
+                  {formData.month !== 'אדר ב׳' && formData.day === 30 && (
+                    <>בשנים שבהן חודש זה מכיל 29 ימים בלבד, אירוע זה יחול ביום כ״ט.</>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
