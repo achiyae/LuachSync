@@ -179,6 +179,51 @@ describe('Import/export e2e flow', () => {
     expect(previewText).toContain('X-EXPORT-OCCURRENCES:3');
   });
 
+  it('restores occurrences from X-EXPORT-OCCURRENCES header when importing an ICS file', async () => {
+    const user = userEvent.setup();
+
+    window.localStorage.setItem('luachsync.appState.v1', JSON.stringify({
+      events: [],
+      exportSettings: {
+        selectedSchema: 'ics',
+        reminderMode: 'none',
+        selectedEventTypes: [],
+        occurrences: 100,
+      },
+    }));
+
+    const icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'X-EXPORT-OCCURRENCES:7',
+      'X-EXPORT-REMINDER-MODE:none',
+      'X-EXPORT-EVENT-TYPES:birthday',
+      'BEGIN:VEVENT',
+      'UID:event-1@luachsync-source',
+      'SUMMARY:Test Event',
+      'CATEGORIES:birthday',
+      'DTSTART;VALUE=DATE:20240101',
+      'X-HEBREW-DATE:1 תשרי 5784',
+      'X-AFTER-SUNSET:false',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].join('\n');
+
+    const file = new File([icsContent], 'test.ics', { type: 'text/calendar' });
+
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'ייצוא וייבוא' }));
+    await screen.findByRole('heading', { name: 'ייצוא וייבוא נתוני לוח שנה' });
+
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(fileInput, file);
+
+    // occurrences-input should now reflect the imported value
+    const occurrencesInput = await screen.findByTestId('occurrences-input') as HTMLInputElement;
+    expect(occurrencesInput.value).toBe('7');
+  });
+
   it('Adar II occurrences in non-leap years are not skipped but fall on Adar I', async () => {
     const user = userEvent.setup();
 
